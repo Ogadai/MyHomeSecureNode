@@ -1,0 +1,9 @@
+{
+  "name": "MyHomeSecureNode",
+  "version": "0.0.1",
+  "description": "Sensor Node for home secure service",
+  "author": "Andy Lee <andy.lee.surfer@gmail.com>",
+  "scripts": {
+    "test": "node test-server.js"
+  }
+}
