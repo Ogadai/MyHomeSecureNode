@@ -5,5 +5,9 @@
   "author": "Andy Lee <andy.lee.surfer@gmail.com>",
   "scripts": {
     "test": "node test-server.js"
+  },
+  "dependencies": {
+    "keypress": "^0.2.1",
+    "websocket": "^1.0.22"
   }
 }

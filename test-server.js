@@ -2,7 +2,7 @@ var WebSocketClient = require('websocket').client,
     keypress        = require("keypress");
 
 var client = new WebSocketClient(),
-    socketPort = 1337;
+    socketPort = 45738;
 
 client
   .on('connectFailed', function(error) {
@@ -24,13 +24,19 @@ client
         }
       })
 
+    var doorOpen = false;
+
     keypress(process.stdin);
     process.stdin.on('keypress', function(ch, key) {
       if (key) {
         switch(key.name) {
           case 'p':
-          sendMessage({ name: 'PIR', message: 'activated' });
+            sendMessage({ method: 'sensor', name: 'pir', message: 'activated' });
             break;
+          case 'd':
+            doorOpen = !doorOpen;
+            sendMessage({ method: 'sensor', name: 'door', message: doorOpen ? 'open' : 'closed' });
+            break
           case 'c':
             if (key.ctrl) {
               process.exit(0);
@@ -45,7 +51,7 @@ client
     }
     process.stdin.resume();
 
-    sendMessage({ name: 'Test', message: 'Hello Hub' });
+    sendMessage({ method: 'initialise', name: 'testnode' });
 
     function sendMessage(data) {
       var message = JSON.stringify(data);
@@ -55,4 +61,4 @@ client
     }
   })
 
-client.connect('ws://localhost:1337', 'echo-protocol');
+client.connect('ws://localhost:' + socketPort, 'echo-protocol');
