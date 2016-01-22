@@ -4,10 +4,12 @@
   "description": "Sensor Node for home secure service",
   "author": "Andy Lee <andy.lee.surfer@gmail.com>",
   "scripts": {
+    "start": "node server.js",
     "test": "node test-server.js"
   },
   "dependencies": {
     "keypress": "^0.2.1",
-    "websocket": "^1.0.22"
+    "websocket": "^1.0.22",
+    "onoff": "^1.0.3"
   }
 }

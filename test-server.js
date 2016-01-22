@@ -24,14 +24,24 @@ client
         }
       })
 
-    var doorOpen = false;
+    var doorOpen = false,
+        pirActiveTimeout = null;
 
     keypress(process.stdin);
     process.stdin.on('keypress', function(ch, key) {
       if (key) {
         switch(key.name) {
           case 'p':
-            sendMessage({ method: 'sensor', name: 'pir', message: 'activated' });
+            if (!pirActiveTimeout) {
+                sendMessage({ method: 'sensor', name: 'pir', message: 'activated' });
+            } else {
+                clearTimeout(pirActiveTimeout);
+            }
+            pirActiveTimeout = setTimeout(function () {
+                sendMessage({ method: 'sensor', name: 'pir', message: 'reset' });
+                pirActiveTimeout = null;
+            }, 5000);
+
             break;
           case 'd':
             doorOpen = !doorOpen;
@@ -52,6 +62,8 @@ client
     process.stdin.resume();
 
     sendMessage({ method: 'initialise', name: 'testnode' });
+    sendMessage({ method: 'sensor', name: 'pir', message: 'reset' });
+    sendMessage({ method: 'sensor', name: 'door', message: 'closed' });
 
     function sendMessage(data) {
       var message = JSON.stringify(data);
