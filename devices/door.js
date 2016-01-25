@@ -3,7 +3,7 @@
 
 function DeviceDoor(config) {
     var self = this,
-        open = false;
+        open = true;
 
     if (Gpio) {
         var gpio = new Gpio(config.gpio.pin, 'in', 'both');
@@ -11,7 +11,7 @@ function DeviceDoor(config) {
             if (err) {
                 console.log(err);
             } else {
-                setState(value === 1);
+                setState(value !== 1);
             }
         });
     }

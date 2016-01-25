@@ -11,7 +11,7 @@ function DeviceLed(config) {
 
     self.setState = function (state) {
         if (gpio) {
-            gpio.writeSync(state ? 1 : 0);
+            gpio.writeSync(state === 'on' ? 1 : 0);
         }
     }
 }
