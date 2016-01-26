@@ -4,6 +4,7 @@
 deviceType.pir = require('./devices/pir');
 deviceType.door = require('./devices/door');
 deviceType.led = require('./devices/led');
+deviceType.rfid = require('./devices/rfid');
 
 function DeviceList(configList) {
     var self = this,

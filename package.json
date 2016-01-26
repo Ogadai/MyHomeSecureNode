@@ -10,6 +10,7 @@
   "dependencies": {
     "keypress": "^0.2.1",
     "onoff": "^1.0.3",
+    "rc522-rfid": "^14.1.10",
     "websocket": "^1.0.22"
   }
 }
