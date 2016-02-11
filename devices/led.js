@@ -7,6 +7,10 @@ function DeviceLed(config) {
 
     if (Gpio) {
         gpio = new Gpio(config.gpio.pin, 'out');
+
+	this.disconnect = function() {
+	    gpio.unexport();
+        }
     }
 
     self.setState = function (state) {

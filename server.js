@@ -16,6 +16,8 @@ process.stdin.on('keypress', function (ch, key) {
         switch (key.name) {
             case 'c':
                 if (key.ctrl) {
+		    console.log('disconnecting devices');
+		    deviceList.disconnectAll();
                     process.exit(0);
                 }
                 break;

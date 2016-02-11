@@ -7,6 +7,9 @@ function DeviceDoor(config) {
 
     if (Gpio) {
         var gpio = new Gpio(config.gpio.pin, 'in', 'both');
+
+	open = gpio.readSync() !== 1;
+
         gpio.watch(function (err, value) {
             if (err) {
                 console.log(err);
@@ -14,6 +17,10 @@ function DeviceDoor(config) {
                 setState(value !== 1);
             }
         });
+
+	this.disconnect = function() {
+	    gpio.unexport();
+        }
     }
 
     function setState(isOpen) {
@@ -23,9 +30,14 @@ function DeviceDoor(config) {
         }
     }
 
+    this.reportInitialState = function() {
+        self.emit('changed', open ? 'open' : 'closed');
+    }
+
     this._test = function () {
         setState(!open);
     };
+
 }
 DeviceDoor.prototype.__proto__ = events.EventEmitter.prototype;
 module.exports = DeviceDoor;

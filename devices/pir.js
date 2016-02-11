@@ -13,6 +13,10 @@ function DevicePIR(config) {
                 activate();
             }
         });
+
+	this.disconnect = function() {
+	    gpio.unexport();
+        }
     }
 
     var timeout;

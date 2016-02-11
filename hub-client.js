@@ -36,7 +36,9 @@ function HubClient(socketPort) {
       })
 
     this.send = function (data) {
-        connection.sendUTF(JSON.stringify(data));
+        if (connection) {
+	    connection.sendUTF(JSON.stringify(data));
+	}
     }
 
     this.connect = function () {
