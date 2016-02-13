@@ -48,8 +48,10 @@ console.log('tag: ' + tagId);
 	}
     }
 
+    var testAlt = false;
     self._test = function () {
-        self.emit('changed', 'test-tag');
+	testAlt = !testAlt;
+        self.emit('changed', testAlt ? 'test-tag' : 'test-alt');
     };
 
     // And the exit event shuts down the child.
