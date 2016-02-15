@@ -51,7 +51,7 @@ console.log('tag: ' + tagId);
     var testAlt = false;
     self._test = function () {
 	testAlt = !testAlt;
-        self.emit('changed', testAlt ? 'test-tag' : 'test-alt');
+        self.emit('changed', testAlt ? [4,3,2,1] : [1,2,3,4]);
     };
 
     // And the exit event shuts down the child.
