@@ -5,7 +5,7 @@
     keypress = require("keypress");
 
 var hubClient = new HubClient(settings.hubPort),
-    deviceList = new DeviceList(settings.devices),
+    deviceList = new DeviceList(settings.devices, settings.name),
     node = new Node(settings.name, hubClient, deviceList);
 
 hubClient.connect();
@@ -13,24 +13,23 @@ hubClient.connect();
 keypress(process.stdin);
 process.stdin.on('keypress', function (ch, key) {
     if (key) {
-        switch (key.name) {
-            case 'c':
-                if (key.ctrl) {
-		    console.log('disconnecting devices');
-		    deviceList.disconnectAll();
+        if (key.ctrl) {
+            switch (key.name) {
+                case 'c':
+                    console.log('disconnecting devices');
+                    deviceList.disconnectAll();
                     process.exit(0);
-                }
-                break;
-            default:
-                settings.devices.forEach(function (config) {
-                    if (config.testKey === key.name) {
-                        var device = deviceList.getDevice(config.name);
-                        if (device._test) {
-                            device._test();
-                        }
+                    break;
+            }
+        } else {
+            settings.devices.forEach(function (config) {
+                if (config.testKey === key.name) {
+                    var device = deviceList.getDevice(config.name);
+                    if (device._test) {
+                        device._test();
                     }
-                });
-                break;
+                }
+            });
         }
     }
 });
