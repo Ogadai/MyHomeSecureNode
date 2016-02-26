@@ -8,7 +8,10 @@ function Node(name, hubClient, deviceList) {
     hubClient
         .on('initialised', function () {
             hubClient.send({ method: 'initialise', name: name })
-	    deviceList.reportInitialStates();
+	        deviceList.reportInitialStates();
+        })
+        .on('settings', function (message) {
+            deviceList.applySettings(message.settings)
         })
         .on('setState', function (data) {
             var device = deviceList.getDevice(data.name)

@@ -5,8 +5,9 @@ deviceType.pir = require('./devices/pir');
 deviceType.door = require('./devices/door');
 deviceType.led = require('./devices/led');
 deviceType.rfid = require('./devices/rfid');
+deviceType.camera = require('./devices/camera');
 
-function DeviceList(configList) {
+function DeviceList(configList, nodeName) {
     var self = this,
         devices = {};
 
@@ -16,22 +17,30 @@ function DeviceList(configList) {
 
     this.reportInitialStates = function() {
         for(var name in devices) {
-	    if (devices[name].reportInitialState) {
-		devices[name].reportInitialState();
+	        if (devices[name].reportInitialState) {
+		        devices[name].reportInitialState();
+	        }
 	    }
-	}
+    }
+
+    this.applySettings = function (hubSettings) {
+        for (var name in devices) {
+            if (devices[name].applySettings) {
+                devices[name].applySettings(hubSettings);
+            }
+        }
     }
 
     this.disconnectAll = function() {
         for(var name in devices) {
-	    if (devices[name].disconnect) {
-		devices[name].disconnect();
+	        if (devices[name].disconnect) {
+		        devices[name].disconnect();
+	        }
 	    }
-	}
     }
 
     configList.forEach(function (config) {
-        var device = new deviceType[config.type](config);
+        var device = new deviceType[config.type](config, nodeName);
         device.on('changed', function (message) { deviceEvent(config.name, message); })
         devices[config.name] = device;
 

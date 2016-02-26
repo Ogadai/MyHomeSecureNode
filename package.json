@@ -8,8 +8,10 @@
     "test": "node test-server.js"
   },
   "dependencies": {
+    "extend": "^3.0.0",
     "keypress": "^0.2.1",
     "onoff": "^1.0.3",
+    "raspicam": "^0.2.13",
     "rc522-rfid": "^14.1.10",
     "websocket": "^1.0.22"
   }
