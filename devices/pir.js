@@ -10,7 +10,9 @@ function DevicePIR(config) {
             if (err) {
                 console.log(err);
             } else if (value === 1) {
-                activate();
+		self.emit('changed', 'activated');
+            } else {
+		self.emit('changed', 'reset');
             }
         });
 
@@ -20,7 +22,7 @@ function DevicePIR(config) {
     }
 
     var timeout;
-    function activate() {
+    this._test = function () {
         if (!timeout) {
             self.emit('changed', 'activated');
         } else {
@@ -30,10 +32,6 @@ function DevicePIR(config) {
             self.emit('changed', 'reset');
             timeout = null;
         }, 5000);
-    }
-
-    this._test = function () {
-        activate();
     };
 }
 DevicePIR.prototype.__proto__ = events.EventEmitter.prototype;
