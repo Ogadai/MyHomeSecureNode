@@ -12,7 +12,8 @@ function DeviceCamera(config, nodeName) {
         socketClient,
         camera,
         hubSettings,
-        timelapseMode = true;
+        timelapseMode = true,
+	updateReq;
 
     var FILE_PATH = '../garageCam/',
         FILE_NAME = 'snapshot%06d.jpg';
@@ -22,9 +23,10 @@ function DeviceCamera(config, nodeName) {
     };
 
     self.setState = function (state) {
-        var newOn = state === 'on';
+        var newOn = (state !== 'off');
         if (newOn !== videoOn) {
             if (newOn) {
+		timelapseMode = (state === 'timelapse');
                 start();
             } else {
                 stop();
@@ -48,12 +50,9 @@ function DeviceCamera(config, nodeName) {
 
         camera.on("start", function (err, timestamp, stream) {
             console.log("video started");
-
-            if (!timelapseMode) {
-                stream.on('data', function (data) {
-                    
-                })
-            }
+	    if (!timelapseMode) {
+	    	uploadStream(stream);
+	    }
         });
 
         camera.on("exit", function () {
@@ -91,10 +90,15 @@ function DeviceCamera(config, nodeName) {
             camera.stop();
             camera = null;
         }
+	if(updateReq) {
+	    updateReq.end();
+    	    updateReq = null;
+	}
     }
 
-    function uploadFile(filePath, done) {
-        var fullUrl = hubSettings.addr.replace('wss://', '').replace('ws://', '') + 'UploadSnapshot',
+    function beginUpload() {
+	var controller = timelapseMode ? 'UploadSnapshot' : 'UploadStream',
+            fullUrl = hubSettings.addr.replace('wss://', '').replace('ws://', '') + controller,
             pathIndex = fullUrl.indexOf('/'),
 	    protocol = hubSettings.addr.substring(0, 4) == 'wss:' ? https : http,
             host = fullUrl.substring(0, pathIndex),
@@ -116,7 +120,7 @@ function DeviceCamera(config, nodeName) {
             method: 'POST'
         };
 
-        var req = protocol.request(options, function (res) {
+	updateReq = protocol.request(options, function (res) {
             if (res.statusCode !== 200) {
                 console.log('STATUS: ' + res.statusCode);
                 res.setEncoding('utf8');
@@ -125,17 +129,30 @@ function DeviceCamera(config, nodeName) {
                 });
             }
         });
-        req.on('error', function (err) {
+        updateReq.on('error', function (err) {
             console.error('error uploading: ' + err.message);
         });
+    }
+
+    function uploadStream(stream) {
+	beginUpload();	
+
+	stream.on('data', function(data) {
+	    updateReq.write(data);
+	});
+    }
+
+    function uploadFile(filePath, done) {
+	beginUpload();	
 
         fs.readFile(filePath, function (err, data) {
             if (err) {
                 console.error('error reading snapshot file - ' + err);
             } else {
-                req.write(data);
+                updateReq.write(data);
             }
-            req.end();
+            updateReq.end();
+	    updateReq = null;
 
             done();
         });
