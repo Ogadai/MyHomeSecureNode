@@ -1,15 +1,20 @@
 ﻿var events = require('events'),
     extend = require('extend'),
+    fs = require('fs'),
+    http = require('http'),
     RaspiCam = require('raspicam'),
-    RaspiCamMock = require('./test/raspicam-mock'),
-    W3CWebSocket = require('websocket').w3cwebsocket;
+    RaspiCamMock = require('./test/raspicam-mock');
 
 function DeviceCamera(config, nodeName) {
     var self = this,
         videoOn = false,
         socketClient,
         camera,
-        hubSettings;
+        hubSettings,
+        timelapseMode = true;
+
+    var FILE_PATH = '../garageCam/',
+        FILE_NAME = 'snapshot%06d.jpg';
 
     self.applySettings = function (s) {
         hubSettings = s;
@@ -27,10 +32,8 @@ function DeviceCamera(config, nodeName) {
     }
 
     function start() {
-        openSocket(function () {
-            startCamera();
-            videoOn = true;
-        });
+        startCamera();
+        videoOn = true;
     }
     function stop() {
         stopCamera();
@@ -45,18 +48,40 @@ function DeviceCamera(config, nodeName) {
         camera.on("start", function (err, timestamp, stream) {
             console.log("video started");
 
-            stream.on('data', function (data) {
-                if (socketClient) {
-                    socketClient.send(data);
-                }
-            })
+            if (!timelapseMode) {
+                stream.on('data', function (data) {
+                    if (socketClient) {
+                        socketClient.send(data);
+                    }
+                })
+            }
         });
 
         camera.on("exit", function () {
             process.stdout.write('\n');
             console.log("video child process has exited");
-            closeSocket();
         });
+
+        if (timelapseMode) {
+            var uploadingFile = false;
+
+            camera.on("read", function (err, timestamp, filename) {
+                var filePath = FILE_PATH + filename;
+
+                if (uploadingFile) {
+                    console.log('skipping snapshot: ' + filename);
+                    fs.unlink(filePath);
+                } else {
+                    console.log("uploading snapshot: " + filename);
+                    uploadingFile = true;
+
+                    uploadFile(filePath, function () {
+                        fs.unlink(filePath);
+                        uploadingFile = false;
+                    });
+                }
+            });
+        }
 
         camera.start();
     }
@@ -67,49 +92,66 @@ function DeviceCamera(config, nodeName) {
         }
     }
 
-    function openSocket(callbackFn) {
-        socketClient = new W3CWebSocket(hubSettings.addr + 'camera', 'echo-protocol');
-        socketClient.onopen = function () {
-            console.log((new Date()).toLocaleTimeString() + ': Connected to Azure camera feed');
+    function uploadFile(filePath, done) {
+        var fullUrl = hubSettings.addr.replace('wss://', '').replace('ws://', '') + 'UploadSnapshot',
+            pathIndex = fullUrl.indexOf('/'),
+            host = fullUrl.substring(0, pathIndex),
+            path = fullUrl.substring(pathIndex),
+            query = '?hub=' + encodeURIComponent(hubSettings.identification.name) +
+                    '&token=' + encodeURIComponent(hubSettings.identification.token) +
+                    '&node=' + encodeURIComponent(nodeName);
 
-            var initialiseData = {
-                Method: 'Initialise',
-                Name: hubSettings.identification.name,
-                Token: hubSettings.identification.token,
-                Node: nodeName
-            };
-            socketClient.send(JSON.stringify(initialiseData));
-
-            callbackFn()
-        };
-
-        socketClient.onclose = function () {
-            console.log('Disconnected from Azure camera feed');
-            socketClient = null;
-            stop()
-        };
-
-        socketClient.onerror = function () {
-            console.log('Error connecting to Azure camera feed');
-            socketClient = null;
-            stop()
-        };
-    }
-
-    function closeSocket() {
-        if (socketClient) {
-            socketClient.close();
-            socketClient = null;
+        var portIndex = host.indexOf(':'),
+            port = 80;
+        if (portIndex !== -1) {
+            port = parseInt(host.substring(portIndex + 1));
+            host = host.substring(0, portIndex);
         }
+        var options = {
+            host: host,
+            port: port,
+            path: path + query,
+            method: 'POST'
+        };
+
+        var req = http.request(options, function (res) {
+            if (res.statusCode !== 200) {
+                console.log('STATUS: ' + res.statusCode);
+                res.setEncoding('utf8');
+                res.on('data', function (chunk) {
+                    console.log('BODY: ' + chunk);
+                });
+            }
+        });
+        req.on('error', function (err) {
+            console.error('error uploading: ' + err.message);
+        });
+
+        fs.readFile(filePath, function (err, data) {
+            if (err) {
+                console.error('error reading snapshot file - ' + err);
+            } else {
+                req.write(data);
+            }
+            req.end();
+
+            done();
+        });
     }
 
     function getCameraSettings() {
-        return extend({}, {
+        var camSettings = timelapseMode ? {
+            mode: "timelapse",
+            output: FILE_PATH + FILE_NAME,
+            timelapse: 1000,
+            timeout: 0
+        } : {
             mode: "video",
             output: "-",
             framerate: 15,
             timeout: 0
-        }, config.settings);
+        };
+        return extend({}, camSettings, config.settings);
     }
 
     this._test = function () {

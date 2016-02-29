@@ -31,3 +31,4 @@ node_modules
 *.pyc
 
 settings.js
+devices/test/test.jpg

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "extend": "^3.0.0",
+    "http": "0.0.0",
     "keypress": "^0.2.1",
     "onoff": "^1.0.3",
     "raspicam": "^0.2.13",
