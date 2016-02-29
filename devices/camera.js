@@ -2,6 +2,7 @@
     extend = require('extend'),
     fs = require('fs'),
     http = require('http'),
+    https = require('https'),
     RaspiCam = require('raspicam'),
     RaspiCamMock = require('./test/raspicam-mock');
 
@@ -50,9 +51,7 @@ function DeviceCamera(config, nodeName) {
 
             if (!timelapseMode) {
                 stream.on('data', function (data) {
-                    if (socketClient) {
-                        socketClient.send(data);
-                    }
+                    
                 })
             }
         });
@@ -68,10 +67,11 @@ function DeviceCamera(config, nodeName) {
             camera.on("read", function (err, timestamp, filename) {
                 var filePath = FILE_PATH + filename;
 
-                if (uploadingFile) {
+		if (fs.existsSync(filePath)) {
+                  if (uploadingFile) {
                     console.log('skipping snapshot: ' + filename);
                     fs.unlink(filePath);
-                } else {
+                  } else {
                     console.log("uploading snapshot: " + filename);
                     uploadingFile = true;
 
@@ -79,7 +79,8 @@ function DeviceCamera(config, nodeName) {
                         fs.unlink(filePath);
                         uploadingFile = false;
                     });
-                }
+                  }
+		}
             });
         }
 
@@ -95,6 +96,7 @@ function DeviceCamera(config, nodeName) {
     function uploadFile(filePath, done) {
         var fullUrl = hubSettings.addr.replace('wss://', '').replace('ws://', '') + 'UploadSnapshot',
             pathIndex = fullUrl.indexOf('/'),
+	    protocol = hubSettings.addr.substring(0, 4) == 'wss:' ? https : http,
             host = fullUrl.substring(0, pathIndex),
             path = fullUrl.substring(pathIndex),
             query = '?hub=' + encodeURIComponent(hubSettings.identification.name) +
@@ -102,7 +104,7 @@ function DeviceCamera(config, nodeName) {
                     '&node=' + encodeURIComponent(nodeName);
 
         var portIndex = host.indexOf(':'),
-            port = 80;
+            port = undefined;
         if (portIndex !== -1) {
             port = parseInt(host.substring(portIndex + 1));
             host = host.substring(0, portIndex);
@@ -114,7 +116,7 @@ function DeviceCamera(config, nodeName) {
             method: 'POST'
         };
 
-        var req = http.request(options, function (res) {
+        var req = protocol.request(options, function (res) {
             if (res.statusCode !== 200) {
                 console.log('STATUS: ' + res.statusCode);
                 res.setEncoding('utf8');
