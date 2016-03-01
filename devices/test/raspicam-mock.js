@@ -4,9 +4,58 @@
 function RaspiCamMock(opts) {
     var self = this,
         interval,
-        testImage = './devices/test/test.jpg';
+        testImage = './devices/test/test.jpg',
+        testVideo = './devices/test/video.h264';
 
     this.start = function () {
+        if (opts.mode == 'video') {
+            videoStart();
+        } else {
+            timelapseStart();
+        }
+    }
+    this.stop = function () {
+        if (opts.mode == 'video') {
+            videoStop();
+        } else {
+            timelapseStop();
+        }
+        self.emit('exit')
+    }
+
+    var fileData
+    function videoStart() {
+        var videoEmitter = new events.EventEmitter();
+        self.emit('start', 'message', 0, videoEmitter);
+
+        fileData = fs.openSync(testVideo, 'r');
+        var bytesPerChunk = 10000;
+        var buffer = new Buffer(bytesPerChunk);
+        interval = setInterval(function () {
+            fs.read(fileData, buffer, 0, bytesPerChunk, null, function (err, bytesRead, buffer) {
+                var useBuffer = buffer,
+                    endOfFile = false;
+                if (bytesRead < bytesPerChunk) {
+                    useBuffer = buffer.slice(0, bytesRead);
+                    endOfFile = true;
+                }
+
+                videoEmitter.emit('data', useBuffer);
+
+                if (endOfFile) {
+                    clearInterval(interval);
+                    videoEmitter.emit('end');
+                }
+            });
+        }, 10);
+    }
+    function videoStop() {
+        clearInterval(interval);
+        fs.closeSync(fileData);
+        fileData = null;
+    }
+
+    function timelapseStart() {
         self.emit('start', 'message', 0);
         console.log('timelapse: ' + opts.timelapse);
         var index = 1;
@@ -22,9 +71,8 @@ function RaspiCamMock(opts) {
         }, opts.timelapse);
     }
 
-    this.stop = function () {
+    function timelapseStop() {
         clearInterval(interval);
-        self.emit('exit')
     }
 
     function copyFile(source, target, done) {

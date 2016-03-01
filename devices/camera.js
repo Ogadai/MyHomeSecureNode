@@ -134,12 +134,22 @@ function DeviceCamera(config, nodeName) {
         });
     }
 
+    var bytesDone = 0
     function uploadStream(stream) {
-	beginUpload();	
+	  beginUpload();	
 
-	stream.on('data', function(data) {
-	    updateReq.write(data);
-	});
+	  stream.on('data', function(data) {
+	      bytesDone += data.length;
+	      console.log('uploaded: ' + bytesDone);
+	      updateReq.write(data);
+	  });
+
+	  stream.on('end', function () {
+	      console.log('end upload');
+	      updateReq.end();
+	      updateReq = null;
+	      stop();
+	  });
     }
 
     function uploadFile(filePath, done) {
