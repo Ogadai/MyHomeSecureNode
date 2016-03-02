@@ -29,7 +29,7 @@ function RaspiCamMock(opts) {
         self.emit('start', 'message', 0, videoEmitter);
 
         fileData = fs.openSync(testVideo, 'r');
-        var bytesPerChunk = 10000;
+        var bytesPerChunk = 50000;
         var buffer = new Buffer(bytesPerChunk);
         interval = setInterval(function () {
             fs.read(fileData, buffer, 0, bytesPerChunk, null, function (err, bytesRead, buffer) {
@@ -47,7 +47,7 @@ function RaspiCamMock(opts) {
                     videoEmitter.emit('end');
                 }
             });
-        }, 10);
+        }, 1);
     }
     function videoStop() {
         clearInterval(interval);
@@ -57,7 +57,8 @@ function RaspiCamMock(opts) {
 
     function timelapseStart() {
         self.emit('start', 'message', 0);
-        console.log('timelapse: ' + opts.timelapse);
+        var intervalMS = opts.timelapse == 0 ? 1000 : opts.timelapse;
+        console.log('timelapse: ' + intervalMS);
         var index = 1;
         interval = setInterval(function () {
             var filePath = opts.output.replace("%06d", index.toLocaleString('en-GB', { minimumIntegerDigits: 6, useGrouping: false })),
@@ -68,7 +69,7 @@ function RaspiCamMock(opts) {
             });
 
             index++;
-        }, opts.timelapse);
+        }, intervalMS);
     }
 
     function timelapseStop() {

@@ -13,7 +13,8 @@ function DeviceCamera(config, nodeName) {
         camera,
         hubSettings,
         timelapseMode = true,
-	updateReq;
+        nightMode = false,
+	    updateReq;
 
     var FILE_PATH = '../garageCam/',
         FILE_NAME = 'snapshot%06d.jpg';
@@ -23,24 +24,34 @@ function DeviceCamera(config, nodeName) {
     };
 
     self.setState = function (state) {
-        var newOn = (state !== 'off');
-        if (newOn !== videoOn) {
-            if (newOn) {
-		timelapseMode = (state === 'timelapse');
-                start();
-            } else {
-                stop();
-            }
+        if (state === 'timelapse') {
+            start(true);
+        } else if (state === 'video') {
+            start(false);
+        } else if (state === 'off') {
+            stop();
+        } else if (state == 'night') {
+            nightMode = true;
+        } else if (state == 'day') {
+            nightMode = false;
         }
     }
 
-    function start() {
-        startCamera();
-        videoOn = true;
+    function start(timelapse) {
+        if (!videoOn) {
+            timelapseMode = timelapse;
+            startCamera();
+            videoOn = true;
+            self.emit('changed', timelapseMode ? 'timelapse' : 'video');
+        }
     }
     function stop() {
         stopCamera();
-        videoOn = false;
+
+        if (videoOn) {
+            videoOn = false;
+            self.emit('changed', 'off');
+        }
     }
 
     function startCamera() {
@@ -49,15 +60,16 @@ function DeviceCamera(config, nodeName) {
         camera = config.mock ? new RaspiCamMock(settings) : new RaspiCam(settings);
 
         camera.on("start", function (err, timestamp, stream) {
-            console.log("video started");
-	    if (!timelapseMode) {
-	    	uploadStream(stream);
-	    }
+            console.log((timelapseMode ? 'timelapse' : 'video') + ' started');
+	        if (!timelapseMode) {
+	    	    uploadStream(stream);
+	        }
         });
 
         camera.on("exit", function () {
-            process.stdout.write('\n');
-            console.log("video child process has exited");
+            camera = null;
+            console.log((timelapseMode ? 'timelapse' : 'video') + ' finished');
+            stop();
         });
 
         if (timelapseMode) {
@@ -66,20 +78,20 @@ function DeviceCamera(config, nodeName) {
             camera.on("read", function (err, timestamp, filename) {
                 var filePath = FILE_PATH + filename;
 
-		if (fs.existsSync(filePath)) {
+		        if (fs.existsSync(filePath)) {
                   if (uploadingFile) {
                     console.log('skipping snapshot: ' + filename);
-                    fs.unlink(filePath);
-                  } else {
+                    removeFile(filePath);
+                } else {
                     console.log("uploading snapshot: " + filename);
                     uploadingFile = true;
 
                     uploadFile(filePath, function () {
-                        fs.unlink(filePath);
+                        removeFile(filePath);
                         uploadingFile = false;
                     });
                   }
-		}
+		        }
             });
         }
 
@@ -87,13 +99,30 @@ function DeviceCamera(config, nodeName) {
     }
     function stopCamera() {
         if (camera) {
-            camera.stop();
-            camera = null;
+            try {
+                camera.stop();
+            } catch (ex) {
+                console.error('error stopping camera - ' + ex);
+            }
         }
-	if(updateReq) {
-	    updateReq.end();
-    	    updateReq = null;
-	}
+        if (updateReq) {
+            try {
+                updateReq.end();
+            } catch (ex) {
+                console.error('error ending upload request - ' + ex);
+            }
+	    }
+	    camera = null;
+	    updateReq = null;
+    }
+
+    function removeFile(filePath) {
+        try {
+            fs.unlink(filePath);
+        } catch (ex) {
+            console.error('error deleting snapshot file - ' + ex);
+            stop();
+        }
     }
 
     function beginUpload() {
@@ -120,7 +149,7 @@ function DeviceCamera(config, nodeName) {
             method: 'POST'
         };
 
-	updateReq = protocol.request(options, function (res) {
+	    updateReq = protocol.request(options, function (res) {
             if (res.statusCode !== 200) {
                 console.log('STATUS: ' + res.statusCode);
                 res.setEncoding('utf8');
@@ -134,38 +163,59 @@ function DeviceCamera(config, nodeName) {
         });
     }
 
-    var bytesDone = 0
     function uploadStream(stream) {
-	  beginUpload();	
+        try {
+            beginUpload();	
 
-	  stream.on('data', function(data) {
-	      bytesDone += data.length;
-	      console.log('uploaded: ' + bytesDone);
-	      updateReq.write(data);
-	  });
+            stream.on('data', function (data) {
+                try {
+                    updateReq.write(data);
+                } catch (ex) {
+                    console.error('Error uploading stream data - ' + ex);
+                    stop();
+                }
+            });
 
-	  stream.on('end', function () {
-	      console.log('end upload');
-	      updateReq.end();
-	      updateReq = null;
-	      stop();
-	  });
+            stream.on('end', function () {
+                try {
+                    console.log('end upload');
+                    updateReq.end();
+                } catch (ex) {
+                    console.error('Error ending upload of stream data - ' + ex);
+                }
+                updateReq = null;
+                stop();
+            });
+        } catch (ex) {
+            console.error('Error starting upload of stream data - ' + ex);
+            stop();
+        }
     }
 
     function uploadFile(filePath, done) {
-	beginUpload();	
+        try {
+            beginUpload();
 
-        fs.readFile(filePath, function (err, data) {
-            if (err) {
-                console.error('error reading snapshot file - ' + err);
-            } else {
-                updateReq.write(data);
-            }
-            updateReq.end();
-	    updateReq = null;
+            fs.readFile(filePath, function (err, data) {
+                try {
+                    if (err) {
+                        console.error('error reading snapshot file - ' + err);
+                    } else {
+                        updateReq.write(data);
+                    }
+                    updateReq.end();
+                } catch (ex) {
+                    console.error('Error uploading snapshot file "' + filePath + '" - ' + ex);
+                }
 
-            done();
-        });
+                updateReq = null;
+
+                done();
+            });
+        } catch (ex) {
+            console.error('Error starting upload of snapshot data - ' + ex);
+            stop();
+        }
     }
 
     function getCameraSettings() {
@@ -173,18 +223,24 @@ function DeviceCamera(config, nodeName) {
             mode: "timelapse",
             output: FILE_PATH + FILE_NAME,
             timelapse: 1000,
-            timeout: 0
+            timeout: 5 * 60 * 1000,
+            nopreview: true
         } : {
             mode: "video",
             output: "-",
             framerate: 15,
-            timeout: 0
+            timeout: 5 * 60 * 1000,
+            nopreview: true
         };
-        return extend({}, camSettings, config.settings);
+
+        return extend({
+            exposure: nightMode ? 'night' : 'auto',
+            awb: nightMode ? 'incandescent' : 'shade'
+        }, camSettings, config.settings);
     }
 
     this._test = function () {
-        self.setState(videoOn ? "off" : "on");
+        self.setState(videoOn ? "off" : "timelapse");
     };
 }
 DeviceCamera.prototype.__proto__ = events.EventEmitter.prototype;

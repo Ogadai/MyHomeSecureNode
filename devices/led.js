@@ -5,7 +5,8 @@ function DeviceLed(config) {
     var self = this,
         gpio,
 	states = {
-	   on: false,
+	   on: { _default: false },
+       onalt: false,
 	   flash: false,
 	   blink: false
 	},
@@ -22,46 +23,60 @@ function DeviceLed(config) {
     var flashTimer,
 	blinkTimer;
     self.setState = function (state) {
-	if (state === 'on') {
-	    states.on = true;
-	} else if (state === 'off') {
-	    states.on = false;
-	} else if (state === 'flashon') {
-	    if (!flashTimer) {
-		flashTimer = setInterval(function() {
-		    states.flash = !states.flash;
-		    updateState();
-		}, 250);
-	        states.flash = true;
-	    }
-	} else if (state === 'flashoff') {
-	    if (flashTimer) {
-		clearInterval(flashTimer);
-		flashTimer = null;
-	    }
-	    states.flash = false;
-	} else if (state === 'blink') {
-	    if (blinkTimer) clearTimeout(blinkTimer);
-	    blinkTimer = setTimeout(function() {
-	        states.blink = false;
-		blinkTimer = null;
-		updateState();
-	    }, 1000);
-	    states.blink = true;
-	}
+        var index = state.indexOf('.');
 
-	updateState();
+        if (index !== -1) {
+            var name = state.substring(0, index),
+                value = state.substring(index + 1);
+
+            states.on[name] = (value === 'on');
+        } else if (state === 'on') {
+            states.on._default = true;
+        } else if (state === 'off') {
+            states.on._default = false;
+        } else if (state === 'flashon') {
+    	    if (!flashTimer) {
+		        flashTimer = setInterval(function() {
+		            states.flash = !states.flash;
+		            updateState();
+		        }, 250);
+	            states.flash = true;
+	        }
+	    } else if (state === 'flashoff') {
+	        if (flashTimer) {
+		        clearInterval(flashTimer);
+		        flashTimer = null;
+	        }
+	        states.flash = false;
+	    } else if (state === 'blink') {
+	        if (blinkTimer) clearTimeout(blinkTimer);
+	        blinkTimer = setTimeout(function() {
+	            states.blink = false;
+    		    blinkTimer = null;
+	    	    updateState();
+	        }, 1000);
+	        states.blink = true;
+	    }
+
+	    updateState();
     }
 
-    function updateState(){
-	var newState = states.on || states.flash || states.blink;
-	if (newState !== currentState) {
-	    currentState = newState;
+    function updateState() {
+        var anyOn = false;
+        for (var name in states.on) {
+            if (states.on.hasOwnProperty(name)) {
+                anyOn = anyOn || states.on[name];
+            }
+        }
+
+        var newState = anyOn || states.flash || states.blink;
+	    if (newState !== currentState) {
+	        currentState = newState;
 
             if (gpio) {
                 gpio.writeSync(currentState ? 1 : 0);
             }
-	}
+	    }
 
     }
 }
