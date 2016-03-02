@@ -219,19 +219,15 @@ function DeviceCamera(config, nodeName) {
     }
 
     function getCameraSettings() {
-        var camSettings = timelapseMode ? {
-            mode: "timelapse",
-            output: FILE_PATH + FILE_NAME,
-            timelapse: 1000,
-            timeout: 5 * 60 * 1000,
-            nopreview: true
-        } : {
-            mode: "video",
-            output: "-",
-            framerate: 15,
-            timeout: 5 * 60 * 1000,
-            nopreview: true
-        };
+        var camSettings = timelapseMode
+	    ? extend({
+        	mode: "timelapse",
+        	output: FILE_PATH + FILE_NAME
+            }, config.timelapseSettings)
+	    : extend({
+        	mode: "video",
+        	output: "-"
+        }, config.videoSettings);
 
         return extend({
             exposure: nightMode ? 'night' : 'auto',
