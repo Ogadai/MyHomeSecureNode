@@ -26,7 +26,7 @@ function DeviceCamera(config, nodeName) {
     self.setState = function (state) {
         if (state === 'timelapse') {
             start(true);
-        } else if (state === 'video') {
+        } else if (state === 'h264') {
             start(false);
         } else if (state === 'off') {
             stop();
@@ -42,7 +42,7 @@ function DeviceCamera(config, nodeName) {
             timelapseMode = timelapse;
             startCamera();
             videoOn = true;
-            self.emit('changed', timelapseMode ? 'timelapse' : 'video');
+            self.emit('changed', timelapseMode ? 'timelapse' : 'h264');
         }
     }
     function stop() {
