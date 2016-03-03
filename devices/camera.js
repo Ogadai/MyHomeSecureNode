@@ -13,7 +13,7 @@ function DeviceCamera(config, nodeName) {
         camera,
         hubSettings,
         timelapseMode = true,
-        nightMode = false,
+        nightMode = true,
 	    updateReq;
 
     var FILE_PATH = '../garageCam/',
@@ -104,6 +104,22 @@ function DeviceCamera(config, nodeName) {
             } catch (ex) {
                 console.error('error stopping camera - ' + ex);
             }
+
+	    if (timelapseMode) {
+		try {
+		    var files = fs.readdirSync(FILE_PATH);
+		    files.forEach(function(f) {
+			console.log('removing file - ' + f);
+			try {
+			  fs.unlink(FILE_PATH + f);
+			} catch(e) {
+			    console.log('error deleting file - ' + e);
+			}
+		    });
+		} catch(e) {
+		    console.error('error deleting files - ' + e);
+		}
+	    }
         }
         if (updateReq) {
             try {
@@ -231,7 +247,8 @@ function DeviceCamera(config, nodeName) {
 
         return extend({
             exposure: nightMode ? 'night' : 'auto',
-            awb: nightMode ? 'incandescent' : 'shade'
+            awb: nightMode ? 'incandescent' : 'shade',
+	    drc: nightMode ? 'high' : 'off'
         }, camSettings, config.settings);
     }
 
