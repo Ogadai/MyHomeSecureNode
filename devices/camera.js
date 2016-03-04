@@ -8,7 +8,7 @@
 
 function DeviceCamera(config, nodeName) {
     var self = this,
-	states = { on: { _default: false } },
+	states = { on: { _default: 'off' } },
         videoOn = false,
         socketClient,
         camera,
@@ -37,7 +37,7 @@ function DeviceCamera(config, nodeName) {
         } else if (state == 'day') {
             nightMode = false;
 	} else {
-	   states.on._default = value;
+	   states.on._default = state;
 	}
 
         var onValue = 'off';
