@@ -8,6 +8,7 @@
 
 function DeviceCamera(config, nodeName) {
     var self = this,
+	states = { on: { _default: false } },
         videoOn = false,
         socketClient,
         camera,
@@ -24,16 +25,36 @@ function DeviceCamera(config, nodeName) {
     };
 
     self.setState = function (state) {
-        if (state === 'timelapse') {
-            start(true);
-        } else if (state === 'h264') {
-            start(false);
-        } else if (state === 'off') {
-            stop();
+        var index = state.indexOf('.');
+
+        if (index !== -1) {
+            var name = state.substring(0, index),
+                value = state.substring(index + 1);
+
+            states.on[name] = value;
         } else if (state == 'night') {
             nightMode = true;
         } else if (state == 'day') {
             nightMode = false;
+	} else {
+	   states.on._default = value;
+	}
+
+        var onValue = 'off';
+        for (var name in states.on) {
+            if (states.on.hasOwnProperty(name)) {
+		if (onValue === 'off') {
+                    onValue = states.on[name];
+		}
+            }
+        }
+
+        if (onValue === 'timelapse') {
+            start(true);
+        } else if (onValue === 'h264') {
+            start(false);
+        } else { 
+            stop();
         }
     }
 
