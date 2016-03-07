@@ -14,7 +14,7 @@ function DeviceCamera(config, nodeName) {
         camera,
         hubSettings,
         timelapseMode = true,
-        nightMode = true,
+        nightMode = false,
 	    updateReq;
 
     var FILE_PATH = '../garageCam/',
