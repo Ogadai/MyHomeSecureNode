@@ -240,14 +240,13 @@ function DeviceCamera(config, nodeName) {
                     } else {
                         updateReq.write(data);
                     }
-                    updateReq.end();
+                    updateReq.end(done);
+		
                 } catch (ex) {
                     console.error('Error uploading snapshot file "' + filePath + '" - ' + ex);
+		    done()
                 }
-
                 updateReq = null;
-
-                done();
             });
         } catch (ex) {
             console.error('Error starting upload of snapshot data - ' + ex);
