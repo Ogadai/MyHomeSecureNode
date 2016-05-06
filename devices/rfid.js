@@ -9,7 +9,7 @@ function DeviceRFID(config) {
 
     function startReading() {
 
-	if (child) return;
+	if (child || !config.read) return;
 console.log('spawning rfid reader: ' + config.read.cmd + ' ' + __dirname + '/' + config.read.path);
 	child = spawn(config.read.cmd, [__dirname + '/' + config.read.path], { stdio: ['ignore', 'pipe', process.stderr] });
     	var linereader = readline.createInterface(child.stdout, child.stdin);
@@ -65,15 +65,15 @@ console.log('tag: ' + tagId);
     // This is a somewhat ugly approach, but it has the advantage of working
     // in conjunction with most of what third parties might choose to do with
     // uncaughtException listeners, while preserving whatever the exception is.
-    process.once("uncaughtException", function (error) {
+//    process.once("uncaughtException", function (error) {
 	// If this was the last of the listeners, then shut down the child and rethrow.
 	// Our assumption here is that any other code listening for an uncaught
 	// exception is going to do the sensible thing and call process.exit().
-	if (process.listeners("uncaughtException").length === 0) {
-	    stopReading()
-	    throw error;
-	}
-    });
+//	if (process.listeners("uncaughtException").length === 0) {
+//	    stopReading()
+//	    throw error;
+//	}
+//    });
 
 }
 DeviceRFID.prototype.__proto__ = events.EventEmitter.prototype;

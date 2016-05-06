@@ -29,7 +29,7 @@ function RaspiCamMock(opts) {
         self.emit('start', 'message', 0, videoEmitter);
 
         fileData = fs.openSync(testVideo, 'r');
-        var bytesPerChunk = 50000;
+        var bytesPerChunk = 5000;
         var buffer = new Buffer(bytesPerChunk);
         interval = setInterval(function () {
             fs.read(fileData, buffer, 0, bytesPerChunk, null, function (err, bytesRead, buffer) {
