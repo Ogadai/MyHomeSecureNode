@@ -4,7 +4,7 @@
     settings = require('./settings'),
     keypress = require("keypress");
 
-var hubClient = new HubClient(settings.hubPort),
+var hubClient = new HubClient(settings.hubServer || 'localhost', settings.hubPort),
     deviceList = new DeviceList(settings.devices, settings.name),
     node = new Node(settings.name, hubClient, deviceList);
 
