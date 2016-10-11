@@ -1,7 +1,7 @@
 ﻿var WebSocketClient = require('websocket').client,
     events = require('events');
 
-function HubClient(socketPort) {
+function HubClient(socketServer, socketPort) {
     var self = this,
         client = new WebSocketClient(),
         connection = null,
@@ -60,7 +60,7 @@ function HubClient(socketPort) {
     }
 
     this.connect = function () {
-        client.connect('ws://localhost:' + socketPort, 'echo-protocol');
+        client.connect('ws://' + socketServer + ':' + socketPort, 'echo-protocol');
     }
 }
 HubClient.prototype.__proto__ = events.EventEmitter.prototype;
