@@ -132,7 +132,7 @@ function DeviceCamera(config, nodeName) {
 		    files.forEach(function(f) {
 			console.log('removing file - ' + f);
 			try {
-			  fs.unlink(FILE_PATH + f);
+			  fs.unlinkSync(FILE_PATH + f);
 			} catch(e) {
 			    console.log('error deleting file - ' + e);
 			}
@@ -155,7 +155,7 @@ function DeviceCamera(config, nodeName) {
 
     function removeFile(filePath) {
         try {
-            fs.unlink(filePath);
+            fs.unlinkSync(filePath);
         } catch (ex) {
             console.error('error deleting snapshot file - ' + ex);
             stop();
