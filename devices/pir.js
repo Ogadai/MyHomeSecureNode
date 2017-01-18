@@ -8,21 +8,23 @@ function DevicePIR(config) {
     if (Gpio) {
         var gpio = new Gpio(config.gpio.pin, 'in', 'both');
         gpio.watch(function (err, value) {
-	    if (timeout) clearTimeout(timeout);
-	    timeout = null;
-
             if (err) {
                 console.log(err);
-            } else if (value === 1) {
-		self.emit('changed', 'activated');
-
-		timeout = setTimeout(function () {
-	            self.emit('changed', 'reset');
-        	    timeout = null;
-	        }, 120000);
-            } else {
-		self.emit('changed', 'reset');
-            }
+	    } else if (value == 1) {
+		if (timeout) {
+		    self.emit('changed', 'activated');
+		    clearTimeout(timeout);
+		    timeout = null;
+		} else {
+		    timeout = setTimeout(function () {
+        		timeout = null;
+	            }, 20);
+		}
+	    } else {
+		if (!timeout) {
+		    self.emit('changed', 'reset');
+		}
+	    }
         });
 
 	this.disconnect = function() {
