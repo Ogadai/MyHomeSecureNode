@@ -6,9 +6,9 @@ const jpeg = require('jpeg-js'),
 class Motion {
   constructor(config) {
     this.config = Object.assign({
-      colourThreshold: 25
-    , minPercent: 10
-    , maxPercent: 50
+      colourThreshold: 25,
+      minPercent: 10,
+      maxPercent: 50
     }, config)
     this.lastImage = null
   }

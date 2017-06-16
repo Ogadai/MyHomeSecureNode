@@ -5,7 +5,7 @@
   https = require('https'),
   RaspiCam = require('raspicam'),
   RaspiCamMock = require('./test/raspicam-mock'),
-  Motion = require('./devices/motion');
+  Motion = require('./motion');
 
 function DeviceCamera(config, nodeName) {
   var self = this,
@@ -49,17 +49,22 @@ function DeviceCamera(config, nodeName) {
     }
 
     var onValue = 'off';
+    var timelapseOn = false;
     for (var name in states.on) {
       if (states.on.hasOwnProperty(name)) {
-        if (onValue === 'off') {
+        if (states.on[name] !== 'off') {
           onValue = states.on[name];
+          if (name !== 'motion' && onValue === 'timelapse') {
+            timelapseOn = true;
+          }
         }
+        
       }
     }
 
     watchingTimelapse = false;
     if (onValue === 'timelapse') {
-      watchingTimelapse = true;
+      watchingTimelapse = timelapseOn;
       start(true);
     } else if (onValue === 'h264') {
       start(false);
@@ -110,12 +115,13 @@ function DeviceCamera(config, nodeName) {
         var filePath = FILE_PATH + filename;
 
         if (fs.existsSync(filePath)) {
+          
           const detectedMovement = detectingMotion
               ? motion.check(filePath)
               : false;
 
           if (detectedMovement) {
-            self.emit('movement');
+            self.emit('changed', 'movement');
           }
 
           if ((!watchingTimelapse && !detectedMovement) || uploadingFile) {
@@ -213,14 +219,14 @@ function DeviceCamera(config, nodeName) {
         });
       }
     });
-    updateReq.on('error', function (err) {
-      console.error('error uploading: ' + err.message);
-    });
   }
 
   function uploadStream(stream) {
     try {
       beginUpload();
+      updateReq.on('error', function (err) {
+        console.error('error uploading: ' + err.message);
+      });
 
       stream.on('data', function (data) {
         try {
@@ -250,6 +256,10 @@ function DeviceCamera(config, nodeName) {
   function uploadFile(filePath, done) {
     try {
       beginUpload();
+      updateReq.on('error', function (err) {
+        console.error('error uploading: ' + err.message);
+        done();
+      });
 
       fs.readFile(filePath, function (err, data) {
         try {
@@ -269,6 +279,7 @@ function DeviceCamera(config, nodeName) {
     } catch (ex) {
       console.error('Error starting upload of snapshot data - ' + ex);
       stop();
+      done()
     }
   }
 
