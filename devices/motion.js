@@ -16,14 +16,20 @@ class Motion {
   check(file) {
     const lastImage = this.lastImage,
           imageData = this.readFile(file)
-    this.lastImage = imageData
+    if (!imageData) return false;
 
+    this.lastImage = imageData
     return this.compare(lastImage, imageData)
   }
 
   readFile(file) {
-    const jpegData = fs.readFileSync(file)
-    return jpeg.decode(jpegData, true)
+    try {
+      const jpegData = fs.readFileSync(file)
+      return jpeg.decode(jpegData, true)
+    } catch(e) {
+      console.log(e)
+      return null
+    }
   }
 
   compare(file1, file2) {
