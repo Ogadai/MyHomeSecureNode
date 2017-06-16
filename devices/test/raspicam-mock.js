@@ -4,8 +4,11 @@
 function RaspiCamMock(opts) {
     var self = this,
         interval,
-        testImage = './devices/test/test.jpg',
-        testVideo = './devices/test/video.h264';
+        testImages = opts.testFiles
+                ? fs.readdirSync(opts.testFiles).map(f => `${opts.testFiles}/${f}`)
+                : ['./devices/test/garage/08-04-04.783.jpg'],
+        testImageIndex = 0;
+        testVideo = './devices/test/output.h264';
 
     this.start = function () {
         if (opts.mode == 'video') {
@@ -57,16 +60,18 @@ function RaspiCamMock(opts) {
 
     function timelapseStart() {
         self.emit('start', 'message', 0);
-        var intervalMS = opts.timelapse == 0 ? 1000 : opts.timelapse;
+        var intervalMS = opts.timelapse ? opts.timelapse : 1000;
         console.log('timelapse: ' + intervalMS);
         var index = 1;
         interval = setInterval(function () {
             var filePath = opts.output.replace("%06d", index.toLocaleString('en-GB', { minimumIntegerDigits: 6, useGrouping: false })),
                 fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
 
-            copyFile(testImage, filePath, function() {
+            copyFile(testImages[testImageIndex], filePath, function() {
                 self.emit('read', null, null, fileName);
             });
+            testImageIndex++;
+            if (testImageIndex >= testImages.length) testImageIndex = 0;
 
             index++;
         }, intervalMS);
