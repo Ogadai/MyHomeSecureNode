@@ -19,7 +19,7 @@ function DeviceCamera(config, nodeName) {
     detectingMotion = false,
     nightMode = false,
     updateReq,
-    motion = new Motion(config.motion);
+    motion;
 
   var FILE_PATH = '../garageCam/',
     FILE_NAME = 'snapshot%06d.jpg';
@@ -39,6 +39,9 @@ function DeviceCamera(config, nodeName) {
 
       if (name === 'motion') {
         detectingMotion = (value !== 'off');
+        if (detectingMotion) {
+          motion = new Motion(config.motion);
+        }
       }
     } else if (state == 'night') {
       nightMode = true;
