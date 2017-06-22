@@ -2,34 +2,61 @@
 
 const jpeg = require('jpeg-js'),
       fs = require('fs')
+      
 
 class Motion {
   constructor(config) {
     this.config = Object.assign({
       colourThreshold: 25,
       minPercent: 10,
-      maxPercent: 50
+      maxPercent: 50,
+      sequence: 2
     }, config)
+
     this.lastImage = null
+    this.currentSequence = 0
   }
 
-  check(file) {
-    const lastImage = this.lastImage,
-          imageData = this.readFile(file)
-    if (!imageData) return false;
+  check(file, cb) {
+    const initialTime = new Date()
+    
+    this.readFile(file, imageData => {
+      const decodeTime = new Date()
 
-    this.lastImage = imageData
-    return this.compare(lastImage, imageData)
+      const result = this.checkRGB(imageData)
+
+      const afterTime = new Date()
+
+      console.log(`${file} - decode:${decodeTime - initialTime}ms, compare:${afterTime - decodeTime}`)
+      cb(result)
+    })
   }
 
-  readFile(file) {
-    try {
+  // imageData: { width, height, data }
+  checkRGB(imageData) {
+      const lastImage = this.lastImage
+      this.lastImage = imageData
+      
+      const isMotion = this.compare(lastImage, imageData)
+
+      if (isMotion) {
+        this.currentSequence = this.currentSequence + 1
+      } else {
+        this.currentSequence = 0
+      }
+
+      if (this.currentSequence >= this.config.sequence) {
+        this.currentSequence = 0
+        return true
+      }
+      return false
+  }
+
+  readFile(file, cb) {
+    setTimeout(() => {
       const jpegData = fs.readFileSync(file)
-      return jpeg.decode(jpegData, true)
-    } catch(e) {
-      console.log(e)
-      return null
-    }
+      cb(jpeg.decode(jpegData, true))
+    }, 1)
   }
 
   compare(file1, file2) {
