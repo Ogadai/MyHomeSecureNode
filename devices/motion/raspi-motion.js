@@ -16,7 +16,7 @@ class RaspiRGBMotion extends EventEmitter {
 
   start() {
     const cameraSettings = this.getCameraSettings()
-    this.motion = new Motion(this.config.motionSettings)
+    this.motion = new Motion(this.config.motion)
 
     this.raspiRGB.on('image', this.onImage)
     this.raspiRGB.start(cameraSettings)
