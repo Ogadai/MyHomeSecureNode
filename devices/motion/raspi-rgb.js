@@ -2,7 +2,7 @@
 const EventEmitter = require('events'),
     	extend = require('extend'),
       spawn = require("child_process").spawn,
-      COMMAND = 'raspistillyuv',
+      COMMAND = '/opt/vc/bin/raspiyuv',
       INFINITY_MS = 999999999
 
 class RaspiRGB extends EventEmitter {
@@ -21,7 +21,7 @@ class RaspiRGB extends EventEmitter {
 
     this.childProcess.stdout.on('data', data => {
       const imageData = {
-        width: cameraSettings.width,
+        width: cameraSettings.width / 2,
         height: cameraSettings.height,
         data
       }
@@ -67,16 +67,18 @@ class RaspiRGB extends EventEmitter {
     const options = extend(
         { width: 256, height: 256 },
         cameraSettings,
-        { mode: 'timelapse', timeout: INFINITY_MS, output: '-' }
+        { timeout: INFINITY_MS, output: '-' }
       )
+    delete options.quality
+    delete options.thumb
 
     // build the arguments
     var args = [];
     for(var opt in options){
       args.push("--" + opt);
       //don't add value for true flags
-      if( this.opts[opt].toString() != "true" && this.opts[opt].toString() != "false"){
-        args.push(this.opts[opt].toString());
+      if( options[opt].toString() != "true" && options[opt].toString() != "false"){
+        args.push(options[opt].toString());
       }
     }
     return args

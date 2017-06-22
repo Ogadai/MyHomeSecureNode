@@ -5,19 +5,17 @@ const Motion = require('./devices/motion/motion')
 console.log('Running test-motion')
 
 const raspiMotion = new RaspiMotion({
-    mock: true,
+    mock: false,
     settings: {
-
-    },
-    timelapseSettings: {
-
+	width: 1296, height: 730, nopreview: true, timeout: 5 * 60 * 1000
+    }, timelapseSettings: {
+        timelapse: 1000, quality: 70, annotate: 524, thumb: 'none'
     },
     motionSettings: {
-        width: 128,
+        width: 256,
         height: 128,
         annotate: 0,
-        timelapse: 500,
-        mode: 7
+        timelapse: 1000
     }
 })
 
