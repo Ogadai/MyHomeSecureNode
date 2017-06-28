@@ -91,10 +91,12 @@ class Motion {
   }
 
   getRegions(imageData) {
-    return {
-      includes: this.config.includes || [this.defaultInclude(imageData)],
-      excludes: this.config.excludes || []
-    }
+    const processFn = this.processRegion.bind(this, imageData)
+
+    const includes = this.config.includes ? this.config.includes.map(processFn) : [this.defaultInclude(imageData)],
+          excludes = this.config.excludes ? this.config.excludes.map(processFn) : []
+
+    return { includes, excludes }
   }
 
   defaultInclude(imageData) {
@@ -103,6 +105,26 @@ class Motion {
       top: 0,
       width: imageData.width,
       height: imageData.height
+    }
+  }
+
+  processRegion(imageData, region) {
+    const valFn = (v, size) => {
+      if (typeof v === 'string') {
+        const numVal = parseInt(v)
+        if (v.endsWith('%')) {
+          return Math.round(numVal * size / 100)
+        }
+        return numVal
+      }
+      return v
+    }
+
+    return {
+      left: valFn(region.left, imageData.width),
+      top: valFn(region.top, imageData.height),
+      width: valFn(region.width, imageData.width),
+      height: valFn(region.height, imageData.height)
     }
   }
 
