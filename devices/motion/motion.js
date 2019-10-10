@@ -1,8 +1,8 @@
 "use strict"
 
 const jpeg = require('jpeg-js'),
-      fs = require('fs')
-      
+      fs = require('fs'),
+      MotionStore = require('./motion-store')
 
 class Motion {
   constructor(config) {
@@ -15,6 +15,7 @@ class Motion {
 
     this.lastImage = null
     this.currentSequence = 0
+    this.motionStore = (config.store && config.store.length) ? new MotionStore(config) : null
   }
 
   check(file, cb) {
@@ -40,6 +41,9 @@ class Motion {
       const isMotion = this.compare(lastImage, imageData)
 
       if (isMotion) {
+        if (this.motionStore) {
+          this.motionStore.image(imageData)
+        }
         this.currentSequence = this.currentSequence + 1
       } else {
         this.currentSequence = 0
