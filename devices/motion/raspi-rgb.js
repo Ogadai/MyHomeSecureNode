@@ -18,6 +18,7 @@ class RaspiRGB extends EventEmitter {
     this.childStopped = this.childStopped.bind(this)
     this.cameraSettings = null
     this.command = COMMAND[cameraType]
+    this.yuv = cameraType === 'yuv'
     this.buffer = null
   }
 
@@ -52,6 +53,10 @@ class RaspiRGB extends EventEmitter {
       this.buffer = Buffer.from(data)
     } else {
       this.buffer = Buffer.concat([this.buffer, Buffer.from(data)]);
+    }
+
+    if (this.yuv || (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9)) {
+      this.onImage()
     }
   }
 
