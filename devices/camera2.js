@@ -19,10 +19,10 @@ class DeviceCamera extends EventEmitter {
         this.onImage = this.onImage.bind(this)
         this.motion = config.motion ? new Motion(config.motion) : null
 
-        this.raspiRGB = config.mock ? new RaspiRGBMock() : new RaspiRGB()
+        this.raspiRGB = config.mock ? new RaspiRGBMock() : new RaspiRGB('still')
         this.raspiRGB.on('image', this.onImage)
         
-        setTimeout(() => this.raspiRGB.start(config), 1000)
+        setTimeout(() => this.raspiRGB.start(config.settings), 1000)
     }
 
     applySettings(settings) {
