@@ -55,7 +55,6 @@ function HubClient(socketServer, socketPort) {
 
     this.send = function (data) {
         if (connection) {
-            console.log(JSON.stringify(data))
             connection.sendUTF(JSON.stringify(data));
         }
     }

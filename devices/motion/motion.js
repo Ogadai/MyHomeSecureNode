@@ -93,8 +93,10 @@ class Motion {
       }
     }
 
-    const percentChange = tally.changedPixels * 100 / tally.countedPixels
-    console.log(`percent: ${percentChange}`)
+    const percentChange = Math.round(tally.changedPixels * 100 / tally.countedPixels)
+    if (this.config.debug) {
+      console.log(`percent: ${percentChange}`)
+    }
     return percentChange >= this.config.minPercent
         && percentChange <= this.config.maxPercent
   }

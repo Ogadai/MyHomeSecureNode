@@ -4,12 +4,17 @@ const
 	https = require('https')
 
 class Uploader {
-    constructor(settings) {
+    constructor(settings, nodeName) {
         this.settings = settings
+        this.nodeName = nodeName
         this.queue = []
     }
 
     queueData(imageData) {
+        if (this.queue.length > 3) {
+            console.log('Upload queue is busy - skipping image')
+            return
+        }
         this.queue.push(imageData)
         this.triggerUpload()
     }
@@ -35,14 +40,14 @@ class Uploader {
         const controller = timelapseMode ? 'UploadSnapshot' : 'UploadStream',
             fullUrl = this.settings.addr.replace('wss://', '').replace('ws://', '') + controller,
             pathIndex = fullUrl.indexOf('/'),
-        protocol = this.settings.addr.substring(0, 4) == 'wss:' ? https : http,
-            host = fullUrl.substring(0, pathIndex),
+            protocol = this.settings.addr.substring(0, 4) == 'wss:' ? https : http,
             path = fullUrl.substring(pathIndex),
             query = '?hub=' + encodeURIComponent(this.settings.identification.name) +
                     '&token=' + encodeURIComponent(this.settings.identification.token) +
-                    '&node=' + encodeURIComponent(nodeName);
+                    '&node=' + encodeURIComponent(this.nodeName);
 
-        const portIndex = host.indexOf(':'),
+        let host = fullUrl.substring(0, pathIndex)
+        let portIndex = host.indexOf(':'),
             port = undefined;
         if (portIndex !== -1) {
             port = parseInt(host.substring(portIndex + 1));
@@ -88,7 +93,6 @@ class Uploader {
     //             } catch (ex) {
     //                 console.error('Error ending upload of stream data - ' + ex);
     //             }
-    //             updateReq = null;
     //         });
     //     } catch (ex) {
     //         console.error('Error starting upload of stream data - ' + ex);
@@ -98,7 +102,7 @@ class Uploader {
     uploadData(fileData) {
         return new Promise(resolve => {
             try {
-                const updateReq = beginUpload(true);
+                const updateReq = this.beginUpload(true);
                 updateReq.on('error', function (err) {
                     console.error('error uploading: ' + err.message);
                     resolve();
@@ -111,7 +115,6 @@ class Uploader {
                     console.error('Error uploading snapshot file - ' + ex);
                     resolve()
                 }
-                updateReq = null;
             } catch (ex) {
                 console.error('Error starting upload of snapshot data - ' + ex);
                 resolve()

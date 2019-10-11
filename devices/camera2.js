@@ -26,7 +26,7 @@ class DeviceCamera extends EventEmitter {
     }
 
     applySettings(settings) {
-        this.uploader = new Uploader(settings)
+        this.uploader = new Uploader(settings, this.nodeName)
     }
 
     setState(state) {
@@ -66,7 +66,7 @@ class DeviceCamera extends EventEmitter {
         }
 
         if (this.modes.timelapse && this.uploader) {
-            this.uploader.queueData(imageData.data)
+            this.uploader.queueData(Buffer.from(imageData.data))
         }
     }
 
