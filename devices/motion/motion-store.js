@@ -40,11 +40,10 @@ class MotionStore {
                     if (err) {
                         console.log(`Failed to save store image ${filePath}`, err)
                     }
+                    this.triggerSave()
                 })
             })
         }
-
-        this.triggerSave()
     }
 
     checkFolder(folderName, cb) {

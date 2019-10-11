@@ -6,6 +6,7 @@ deviceType.door = require('./devices/door');
 deviceType.led = require('./devices/led');
 deviceType.rfid = require('./devices/rfid');
 deviceType.camera = require('./devices/camera');
+deviceType.camera2 = require('./devices/camera2');
 
 function DeviceList(configList, nodeName) {
     var self = this,

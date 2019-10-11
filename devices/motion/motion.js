@@ -33,6 +33,11 @@ class Motion {
     })
   }
 
+  checkJpeg(imageData) {
+    const rawData = jpeg.decode(imageData.data, true)
+    return this.checkRGB(rawData)
+  }
+
   // imageData: { width, height, data }
   checkRGB(imageData) {
       const lastImage = this.lastImage

@@ -6,24 +6,25 @@ const EventEmitter = require('events'),
       TEST_PATH = `${__dirname}/garage`
 
 class RaspiRGBMock extends EventEmitter {
-  constructor() {
+  constructor(cameraType) {
     super()
     
     this.files = fs.readdirSync(TEST_PATH)
     this.index = 0;
     this.interval = null
+    this.decode = !cameraType || cameraType === 'yuv'
   }
-  start(camerSettings) {
+  start(cameraSettings) {
     this.interval = setInterval(() => {
       const file = `${TEST_PATH}/${this.files[this.index]}`
       this.index = this.index + 1
       if (this.index >= this.files.length) this.index = 1
 
       try {
-      const jpegData = fs.readFileSync(file),
-           imageData = jpeg.decode(jpegData, true)
+        const jpegData = fs.readFileSync(file)
+        const imageData = this.decode ? jpeg.decode(jpegData, true) : jpegData
 
-      this.emit('image', imageData)
+        this.emit('image', imageData)
       } catch(e) {
         console.error(e)
       }

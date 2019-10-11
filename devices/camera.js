@@ -350,7 +350,7 @@ function DeviceCamera(config, nodeName) {
 	}
 
 	this._test = function () {
-		self.setState(videoOn ? "off" : "timelapse");
+		self.setState(detectingMovement ? "off" : "motion");
 	};
 }
 DeviceCamera.prototype.__proto__ = events.EventEmitter.prototype;

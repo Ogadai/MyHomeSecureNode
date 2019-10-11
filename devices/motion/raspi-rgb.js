@@ -2,45 +2,56 @@
 const EventEmitter = require('events'),
     	extend = require('extend'),
       spawn = require("child_process").spawn,
-      COMMAND = '/opt/vc/bin/raspiyuv',
       INFINITY_MS = 999999999
 
+const COMMAND = {
+  yuv: '/opt/vc/bin/raspiyuv',
+  still: '/opt/vc/bin/raspistill'
+}
+
 class RaspiRGB extends EventEmitter {
-  constructor() {
+  constructor(cameraType = 'yuv') {
     super()
 
     this.childProcess = null
     this.stop = this.stop.bind(this)
+    this.childStopped = this.childStopped.bind(this)
+    this.cameraSettings = null
+    this.command = COMMAND[cameraType]
   }
 
   start(cameraSettings) {
+    this.cameraSettings = cameraSettings
+    this.startChild()
+  }
+
+  startChild() {
     process.on('exit', this.stop);
 
-    const args = this.getArgs(cameraSettings)
-    this.childProcess = spawn(COMMAND, args)
+    const args = this.getArgs(this.cameraSettings)
+    this.childProcess = spawn(this.command, args)
 
     this.childProcess.stdout.on('data', data => {
       const imageData = {
-        width: cameraSettings.width / 2,
-        height: cameraSettings.height,
+        width: this.cameraSettings.width,
+        height: this.cameraSettings.height,
         data
       }
       this.emit('image', imageData)
     });
 
     this.childProcess.stderr.on('data', data => {
-      console.log(`${COMMAND}:stderr - ${data}`);
+      console.log(`${this.command}:stderr - ${data}`)
     });
 
-    this.childProcess.on('close', code => {    
-      console.log(`${COMMAND} closed with code ${code}`)
-    });
+    this.childProcess.on('close', this.childStopped)
   }
 
   stop() {
     // Returns promise
     if (this.childProcess) {
-      process.removeListener('exit', this.stop);
+      process.removeListener('exit', this.stop)
+      this.childProcess.removeListener('close', this.childStopped)
 
       return new Promise(resolve => {
         const childProcess = this.childProcess
@@ -52,7 +63,7 @@ class RaspiRGB extends EventEmitter {
           })
           childProcess.kill()
         } catch (err) {
-          console.error(`Error closing ${COMMAND}`)
+          console.error(`Error closing ${this.command}`)
           console.error(err)
 
           resolve()
@@ -61,6 +72,14 @@ class RaspiRGB extends EventEmitter {
     } else {
       return Promise.resolve()
     }
+  }
+
+  childStopped() {
+    process.removeListener('exit', this.stop)
+    this.childProcess.removeListener('close', this.childStopped)
+    console.log(`${this.command} closed with code ${code}`)
+
+    setTimeout(() => this.startChild(), 5000)
   }
 
   getArgs(cameraSettings) {
