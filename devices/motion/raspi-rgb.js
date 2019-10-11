@@ -18,6 +18,8 @@ class RaspiRGB extends EventEmitter {
     this.childStopped = this.childStopped.bind(this)
     this.cameraSettings = null
     this.command = COMMAND[cameraType]
+    this.yuv = cameraType === 'yuv'
+    this.buffer = null
   }
 
   start(cameraSettings) {
@@ -29,22 +31,46 @@ class RaspiRGB extends EventEmitter {
     process.on('exit', this.stop);
 
     const args = this.getArgs(this.cameraSettings)
+    console.log(this.command, ...args)
     this.childProcess = spawn(this.command, args)
+    this.buffer = null
 
-    this.childProcess.stdout.on('data', data => {
-      const imageData = {
-        width: this.cameraSettings.width,
-        height: this.cameraSettings.height,
-        data
-      }
-      this.emit('image', imageData)
-    });
+    this.childProcess.stdout.on('data', data => this.onChunk(data));
 
     this.childProcess.stderr.on('data', data => {
       console.log(`${this.command}:stderr - ${data}`)
     });
 
     this.childProcess.on('close', this.childStopped)
+  }
+
+  onChunk(data) {
+    if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) {
+      this.onImage()
+    }
+
+    if (!this.buffer) {
+      this.buffer = Buffer.from(data)
+    } else {
+      this.buffer = Buffer.concat([this.buffer, Buffer.from(data)]);
+    }
+
+    if (this.yuv || (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9)) {
+      this.onImage()
+    }
+  }
+
+  onImage() {
+    if (this.buffer) {
+      const imageData = {
+        width: this.cameraSettings.width,
+        height: this.cameraSettings.height,
+        data: this.buffer.buffer
+      }
+      this.buffer = null
+
+      setTimeout(() => this.emit('image', imageData))
+    }
   }
 
   stop() {
@@ -74,7 +100,7 @@ class RaspiRGB extends EventEmitter {
     }
   }
 
-  childStopped() {
+  childStopped(code) {
     process.removeListener('exit', this.stop)
     this.childProcess.removeListener('close', this.childStopped)
     console.log(`${this.command} closed with code ${code}`)
@@ -84,7 +110,7 @@ class RaspiRGB extends EventEmitter {
 
   getArgs(cameraSettings) {
     const options = extend(
-        { width: 256, height: 256 },
+        { width: 256, height: 256, timelapse: 1000 },
         cameraSettings,
         { timeout: INFINITY_MS, output: '-' }
       )
