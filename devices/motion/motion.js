@@ -10,7 +10,8 @@ class Motion {
       colourThreshold: 15,
       minPercent: 5,
       maxPercent: 40,
-      sequence: 2
+      sequence: 2,
+      sample: 4
     }, config)
 
     this.lastImage = null
@@ -35,6 +36,7 @@ class Motion {
 
   checkJpeg(imageData) {
     const rawData = jpeg.decode(imageData.data, true)
+    rawData.jpeg = jpeg.data
     return this.checkRGB(rawData)
   }
 
@@ -81,8 +83,8 @@ class Motion {
           changedPixels: 0
         }
 
-    for(var y = 0; y < file1.height; y++) {
-      for(var x = 0; x < file1.width; x++) {
+    for(var y = 0; y < file1.height; y += this.config.sample) {
+      for(var x = 0; x < file1.width; x += this.config.sample) {
         const point = { x, y }
         if (this.isIncluded(regions, point)) {
           tally.countedPixels++

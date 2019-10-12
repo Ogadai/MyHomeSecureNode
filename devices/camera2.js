@@ -59,7 +59,7 @@ class DeviceCamera extends EventEmitter {
 
     onImage(imageData) {
         if (this.motion) {
-            const motionDetected = this.motion.checkRGB(imageData)
+            const motionDetected = this.motion.checkJpeg(imageData)
             if (motionDetected && this.modes.motion) {
                 this.emit('changed', 'movement')
             }

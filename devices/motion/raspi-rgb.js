@@ -31,6 +31,8 @@ class RaspiRGB extends EventEmitter {
     process.on('exit', this.stop);
 
     const args = this.getArgs(this.cameraSettings)
+    this.imageSize = this.cameraSettings.width * this.cameraSettings.height * 4
+
     console.log(this.command, ...args)
     this.childProcess = spawn(this.command, args)
     this.buffer = null
@@ -45,18 +47,27 @@ class RaspiRGB extends EventEmitter {
   }
 
   onChunk(data) {
-    if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) {
-      this.onImage()
-    }
-
     if (!this.buffer) {
       this.buffer = Buffer.from(data)
     } else {
       this.buffer = Buffer.concat([this.buffer, Buffer.from(data)]);
     }
 
-    if (this.yuv || (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9)) {
-      this.onImage()
+    if (this.yuv) {
+      // TODO: the YUV format is obviously not just RGB, so this doesn't work
+      if (this.buffer.length >= this.imageSize) {
+        let extraBuffer
+        if (this.buffer.length > this.imageSize) {
+          extraBuffer = Buffer.from(this.buffer, this.imageSize, this.buffer.length - this.imageSize)
+          this.buffer = Buffer.from(this.buffer, 0, this.imageSize)
+        }
+        this.onImage()
+        this.buffer = extraBuffer
+      }
+    } else {
+      if (data[data.length - 2] == 0xFF && data[data.length - 1] == 0xD9) {
+        this.onImage()
+      }
     }
   }
 

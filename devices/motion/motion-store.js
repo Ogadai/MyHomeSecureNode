@@ -1,12 +1,14 @@
 "use strict"
 const   fs = require('fs'),
         path = require('path'),
-        jpeg = require('jpeg-js'),
-        rimraf = require('rimraf')
+        rimraf = require('rimraf'),
+        jpegEncode = require('./jpeg-encode')
 
 class MotionStore {
     constructor(config) {
-        this.path = config.store
+        console.log(__dirname)
+        this.path = path.join(__dirname, '../..', config.store)
+        console.log(this.path)
         this.storeDays = config.storeDays ? parseInt(config.storeDays) : 0
         this.queue = []
         this.checkedFolders = {}
@@ -26,7 +28,7 @@ class MotionStore {
     doSave() {
         if (this.queue.length > 0) {
             const imageData = this.queue.shift()
-            const encodedJpeg = jpeg.encode(imageData, 50)
+            jpegEncode(imageData)
 
             const now = new Date().toISOString().split('T')
             const folderstamp = now[0]
@@ -36,7 +38,7 @@ class MotionStore {
 
             this.checkFolder(folderstamp, () => {
                 const filePath = path.join(this.path, folderstamp, `${filestamp}.jpg`)
-                fs.writeFile(filePath, encodedJpeg.data, err => {
+                fs.writeFile(filePath, imageData.jpeg, err => {
                     if (err) {
                         console.log(`Failed to save store image ${filePath}`, err)
                     }
