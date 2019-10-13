@@ -11,5 +11,6 @@ if (settings.onoff !== 'disable') {
         console.error('Couldn\'t load Gpio - ' + e);
         module.exports = null;
     }
+} else {
+    module.exports = null;
 }
-module.exports = null;
