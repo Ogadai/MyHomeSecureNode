@@ -8,11 +8,11 @@ class Uploader {
         this.settings = settings
         this.nodeName = nodeName
         this.queue = []
+        this.uploading = false
     }
 
     queueData(imageData) {
-        if (this.queue.length > 3) {
-            console.log('Upload queue is busy - skipping image')
+        if (this.queue.length > 1) {
             return
         }
         this.queue.push(imageData)
@@ -27,10 +27,12 @@ class Uploader {
     }
 
     doUpload() {
-        if (this.queue.length > 0) {
+        if (this.queue.length > 0 && !this.uploading) {
+            this.uploading = true
             const imageData = this.queue.shift()
 
             this.uploadData(imageData).then(() => {
+                this.uploading = false
                 this.triggerUpload()
             })
         }

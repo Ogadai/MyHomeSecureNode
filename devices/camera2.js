@@ -21,6 +21,8 @@ class DeviceCamera extends EventEmitter {
 
         this.raspiRGB = config.mock ? new RaspiRGBMock() : new RaspiRGB('still')
         this.raspiRGB.on('image', this.onImage)
+
+        this.lastImage = null
         
         setTimeout(() => this.raspiRGB.start(config.settings), 1000)
     }
@@ -54,7 +56,17 @@ class DeviceCamera extends EventEmitter {
             const newValue = this.states.on[name];
             modes[newValue] = true
         }
+
+        if (!modes.timelapse && this.modes.timelapse) {
+            this.sendLastImage()
+        }
         this.modes = modes
+    }
+
+    sendLastImage() {
+        if (this.uploader && this.lastImage) {
+            this.uploader.queueData(Buffer.from(this.lastImage.data))
+        }
     }
 
     onImage(imageData) {
@@ -68,6 +80,8 @@ class DeviceCamera extends EventEmitter {
         if (this.modes.timelapse && this.uploader) {
             this.uploader.queueData(Buffer.from(imageData.data))
         }
+
+        this.lastImage = imageData
     }
 
 	_test() {

@@ -40,7 +40,16 @@ class RaspiRGB extends EventEmitter {
     this.childProcess.stdout.on('data', data => this.onChunk(data));
 
     this.childProcess.stderr.on('data', data => {
-      console.log(`${this.command}:stderr - ${data}`)
+      const messages = data.toString()
+        .split('\n')
+        .map(m => m.trim())
+        .filter(m => m.length > 0)
+        
+      messages.forEach(message => {
+        if (!message.startsWith('mmal: Frame ') && !message.startsWith('mmal: Skipping ')) {
+          console.log(`${this.command}:stderr - ${message}`)
+        }
+      })
     });
 
     this.childProcess.on('close', this.childStopped)
