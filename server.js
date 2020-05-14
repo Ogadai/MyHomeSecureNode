@@ -34,18 +34,6 @@ process.stdin.on('keypress', function (ch, key) {
     }
 });
 
-setTimeout(() => {
-    deviceList.getDevice('camera').setState('motion')
-}, 1000)
-
-setTimeout(() => {
-    deviceList.getDevice('camera').setState('test.timelapse')
-}, 8000)
-
-setTimeout(() => {
-    deviceList.getDevice('camera').setState('test.off')
-}, 10000)
-
 if (process.stdin.isTTY) {
     process.stdin.setRawMode(true);
 }

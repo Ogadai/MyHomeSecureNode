@@ -7,6 +7,7 @@ deviceType.led = require('./devices/led');
 deviceType.rfid = require('./devices/rfid');
 deviceType.camera = require('./devices/camera');
 deviceType.camera2 = require('./devices/camera2');
+deviceType.video = require('./devices/video');
 
 function DeviceList(configList, nodeName) {
     var self = this,
@@ -41,11 +42,13 @@ function DeviceList(configList, nodeName) {
     }
 
     configList.forEach(function (config) {
-        var device = new deviceType[config.type](config, nodeName);
-        device.on('changed', function (message) { deviceEvent(config.name, message); })
-        devices[config.name] = device;
+        if (!config.disabled) {
+            var device = new deviceType[config.type](config, nodeName);
+            device.on('changed', function (message) { deviceEvent(config.name, message); })
+            devices[config.name] = device;
 
-        console.log('Configured device "' + config.name + '"');
+            console.log('Configured device "' + config.name + '"');
+        }
     });
 
     function deviceEvent(name, message) {

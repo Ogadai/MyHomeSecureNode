@@ -1,17 +1,14 @@
 "use strict"
 const   fs = require('fs'),
         path = require('path'),
-        rimraf = require('rimraf'),
-        jpegEncode = require('./jpeg-encode')
+        jpegEncode = require('./jpeg-encode'),
+        StoreFolder = require('../imaging/store-folder')
 
 class MotionStore {
     constructor(config) {
-        console.log(__dirname)
         this.path = path.join(__dirname, '../..', config.store)
-        console.log(this.path)
-        this.storeDays = config.storeDays ? parseInt(config.storeDays) : 0
         this.queue = []
-        this.checkedFolders = {}
+        this.storeFolder = new StoreFolder(config)
     }
 
     image(imageData) {
@@ -36,7 +33,7 @@ class MotionStore {
                 .replace(/:/g, '-')
                 .replace(/\./g, '_')
 
-            this.checkFolder(folderstamp, () => {
+            this.storeFolder.checkFolder(folderstamp).then(() => {
                 const filePath = path.join(this.path, folderstamp, `${filestamp}.jpg`)
                 fs.writeFile(filePath, imageData.jpeg, err => {
                     if (err) {
@@ -46,65 +43,6 @@ class MotionStore {
                 })
             })
         }
-    }
-
-    checkFolder(folderName, cb) {
-        if (!this.checkedFolders[folderName]) {
-            const folderPath = path.join(this.path, folderName)
-            const folders = fs.readdirSync(this.path)
-
-            // Check if the target folder exists
-            if (!folders.find(f => f === folderName)) {
-                fs.mkdir(folderPath, err => {
-                    if (err) {
-                        console.log(`Failed to create store folder ${folderPath}`, err)
-                    } else {
-                        this.checkedFolders[folderName] = true
-                        cb()
-                    }
-                })
-                this.purgeFolders(folders)
-            } else {
-                this.checkedFolders[folderName] = true
-            }
-        }
-        cb()
-    }
-
-    purgeFolders(folders) {
-        // Remove any older than the age
-        if (this.storeDays) {
-            const today = new Date()
-            folders.forEach(folder => {
-                const split = folder.split('-')
-                const folderDate = new Date(split[0], split[1] - 1, split[2])
-                folderDate.setDate(folderDate.getDate() + this.storeDays + 1)
-
-                if (folderDate < today) {
-                    this.removeFolder(folder)
-                }
-            });
-        }
-    }
-
-    removeFolder(folderName) {
-        console.log(`Removing ${folderName}`)
-        const folderPath = path.join(this.path, folderName)
-        rimraf(folderPath, err => {
-            if (err) {
-                console.log(`Failed to remove store image files in folder ${folderPath}`, err)
-            }
-        })
-        // fs.unlink(path.join(folderPath, '*'), err => {
-        //     if (err) {
-        //         console.log(`Failed to remove store image files in folder ${folderPath}`, err)
-        //     } else {
-        //         fs.rmdir(folderPath, err => {
-        //             console.log(`Failed to remove store image folder ${folderPath}`, err)
-        //         })
-        //     }
-        // })
-        
     }
 }
 
