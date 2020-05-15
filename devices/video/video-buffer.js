@@ -14,6 +14,7 @@ const DEFAULT_OPTIONS = {
     tempPath: '.',
     videoPath: '.',
     bufferMilliseconds: 10000,
+    minimumRate: 500,
     movementThreshold: 2.3
 }
 
@@ -34,6 +35,10 @@ class VideoBuffer extends EventEmitter {
         this.tempName = null
         this.writeName = null
         this.writeStream = null
+    }
+
+    isRunning() {
+        return !!this.videoFeed;
     }
 
     startVideo(cameraSettings) {
@@ -147,8 +152,9 @@ class VideoBuffer extends EventEmitter {
             }
         }
 
-        if ((previousCount > lastCount) && (timeNow > this.lastMotionTime + 5000)
-                && (lastAvg > previousAvg * this.options.movementThreshold)) {
+        if ((previousCount > lastCount) && (timeNow > this.lastMotionTime + 10000)
+                && (lastAvg > previousAvg * this.options.movementThreshold)
+                && (lastAvg > this.options.minimumRate)) {
             this.emit('motion')
             this.lastMotionTime = timeNow
         }

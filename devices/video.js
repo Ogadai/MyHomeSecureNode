@@ -48,9 +48,9 @@ class VideoCamera extends EventEmitter {
 
       this.states.on[name] = value;
     } else if (state == 'night') {
-      this.nightMode = true;
+      this.setNightMode(true);
     } else if (state == 'day') {
-      this.nightMode = false;
+      this.setNightMode(false);
     } else {
       this.states.on._default = state;
     }
@@ -73,8 +73,20 @@ class VideoCamera extends EventEmitter {
     }
   }
 
+  setNightMode(nightMode) {
+    if (this.nightMode !== nightMode) {
+      this.nightMode = nightMode
+
+      // if (this.videoBuffer.isRunning()) {
+      //   this.stopVideo().then(() => {
+      //     this.startVideo()
+      //   })
+      // }
+    }
+  }
+
   startVideo() {
-    this.videoBuffer.startVideo(this.options.settings);
+    this.videoBuffer.startVideo(this.cameraSettings());
   }
 
   stopVideo() {
@@ -94,7 +106,7 @@ class VideoCamera extends EventEmitter {
       try {
         const stillImage = new StillImage()
 
-        const options = { ...this.options.settings }
+        const options = this.cameraSettings()
         delete options.framerate
 
         stillImage.capture(options)
@@ -126,6 +138,15 @@ class VideoCamera extends EventEmitter {
       this.motionTimeout = null
       this.videoBuffer.stopStream()
     }, this.options.clipMilliseconds - this.options.bufferMilliseconds)
+  }
+
+  cameraSettings() {
+    const settings = {...this.options.settings}
+    // Night exposure wasn't actually better
+    // if (this.nightMode) {
+    //   settings.exposure = 'night'
+    // }
+    return settings
   }
 
   _test() {
