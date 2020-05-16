@@ -3,6 +3,7 @@ const EventEmitter = require('events'),
   extend = require('extend'),
   VideoBuffer = require('./video/video-buffer'),
   Uploader = require('./uploader'),
+  GoogleDrive = require('../google/google-drive'),
   StillImage = require('./imaging/still-image')
 
 const time = () => {
@@ -23,12 +24,15 @@ class VideoCamera extends EventEmitter {
     this.states = { on: { _default: 'off' } }
     this.nodeName = nodeName
 
-    this.motionTimeout = null
+    this.streamTimeout = null
     this.modes = {
       motion: false,
       timelapse: false
     }
-    this.snapshotPromise = null;
+    this.snapshotPromise = null
+
+    this.streamTargets = {}
+    this.streamUpload = false
 
     this.videoBuffer = new VideoBuffer(this.options)
     this.videoBuffer.on('motion', () => this.onMotion())
@@ -37,6 +41,10 @@ class VideoCamera extends EventEmitter {
 
   applySettings(settings) {
     this.uploader = new Uploader(settings, this.nodeName)
+
+    if (settings.drive && settings.drive.credentials && settings.drive.token) {
+      this.googleDrive = new GoogleDrive(settings.drive)
+    }
   }
 
   setState(state) {
@@ -48,40 +56,39 @@ class VideoCamera extends EventEmitter {
 
       this.states.on[name] = value;
     } else if (state == 'night') {
-      this.setNightMode(true);
+      this.nightMode = true
     } else if (state == 'day') {
-      this.setNightMode(false);
+      this.nightMode = false
     } else {
       this.states.on._default = state;
     }
     
     const modes = {
       motion: false,
-      timelapse: false
+      timelapse: false,
+      capture: false
     }
 
     for(let name of Object.keys(this.states.on)) {
         const newValue = this.states.on[name];
         modes[newValue] = true
     }
+
+    if (modes.capture !== this.modes.capture) {
+      // Begin/end capturing video for upload
+      if (modes.capture) {
+        this.startStream('capture')
+      } else {
+        this.stopStream('capture', true)
+      }
+    }
+
     this.modes = modes
 
-    if (state === 'timelapse' && !this.snapshotPromise) {
+    if (state === 'timelapse' && !this.snapshotPromise && !this.modes.capture) {
       this.snapshotPromise = this.pauseForSnapshot().then(() => {
         this.snapshotPromise = null;
       })
-    }
-  }
-
-  setNightMode(nightMode) {
-    if (this.nightMode !== nightMode) {
-      this.nightMode = nightMode
-
-      // if (this.videoBuffer.isRunning()) {
-      //   this.stopVideo().then(() => {
-      //     this.startVideo()
-      //   })
-      // }
     }
   }
 
@@ -123,30 +130,69 @@ class VideoCamera extends EventEmitter {
   }
 
   onMotion() {
-    if (this.motionTimeout) {
-      clearTimeout(this.motionTimeout)
-    } else {
-      console.log(`start stream: ${time()}`)
-      this.videoBuffer.startStream()
-    }
-
     this.emit('changed', 'movement')
 
-    this.motionTimeout = setTimeout(() => {
+    if (this.streamTimeout) {
+      clearTimeout(this.streamTimeout)
+    } else {
+      console.log(`start stream: ${time()}`)
+      this.startStream('motion')
+    }
+
+    this.streamTimeout = setTimeout(() => {
       console.log(`stop stream: ${time()}`)
 
-      this.motionTimeout = null
-      this.videoBuffer.stopStream()
+      this.streamTimeout = null
+      this.stopStream('motion')
     }, this.options.clipMilliseconds - this.options.bufferMilliseconds)
   }
 
+  startStream(targetName) {
+    this.streamTargets[targetName] = true
+
+    if (!this.videoBuffer.isStreaming()) {
+      this.videoBuffer.startStream()
+      this.streamUpload = false
+    }
+  }
+
+  stopStream(targetName, upload) {
+    this.streamTargets[targetName] = false
+    if (upload) {
+      this.streamUpload = true
+    }
+
+    let anyTarget = false
+    for(let target of Object.keys(this.streamTargets)) {
+      if (this.streamTargets[target]) {
+        anyTarget = true
+      }
+    }
+
+    if (this.videoBuffer.isStreaming() && !anyTarget) {
+      return this.videoBuffer.stopStream()
+        .then(filePath => {
+          if (this.streamUpload) {
+            this.uploadToDrive(filePath)
+          }
+          return filePath
+        })
+    } else {
+      return Promise.resolve()
+    }
+  }
+
+  uploadToDrive(filePath) {
+    if (this.googleDrive) {
+      const parts = filePath.split('/')
+      const dateFolder = parts[parts.length -2]
+      const targetFolder = `${dateFolder}/${this.nodeName}`
+      this.googleDrive.uploadFile(filePath, targetFolder)
+    }
+  }
+
   cameraSettings() {
-    const settings = {...this.options.settings}
-    // Night exposure wasn't actually better
-    // if (this.nightMode) {
-    //   settings.exposure = 'night'
-    // }
-    return settings
+    return {...this.options.settings}
   }
 
   _test() {

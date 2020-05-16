@@ -26,7 +26,10 @@ class VideoBuffer extends EventEmitter {
     constructor(options) {
         super()
         this.options = extend({}, DEFAULT_OPTIONS, options)
-        this.storeFolder = new StoreFolder(options)
+        this.storeFolder = new StoreFolder({
+            store: this.options.videoPath,
+            storeDays: this.options.storeDays
+        })
         
         this.videoFeed = null
         this.setupFrames = []
@@ -39,6 +42,10 @@ class VideoBuffer extends EventEmitter {
 
     isRunning() {
         return !!this.videoFeed;
+    }
+
+    isStreaming() {
+        return !!this.writeStream;
     }
 
     startVideo(cameraSettings) {
