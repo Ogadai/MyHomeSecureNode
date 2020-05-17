@@ -3,7 +3,8 @@ const VideoBuffer = require('./devices/video/video-buffer')
 
 const videoBuffer = new VideoBuffer({
     tempPath: '../garageCam',
-    videoPath: '../cam'
+    videoPath: '../cam',
+    debug: false
 })
 
 const time = () => {
@@ -12,42 +13,41 @@ const time = () => {
 
 console.log(`start: ${time()}`)
 videoBuffer.startVideo({
-    width: 800, height: 450, nopreview: true, annotate: 12, exposure: 'sports',
-    framerate: 25, awb: 'greyworld'
+    width: 1280, height: 720, nopreview: true, annotate: 12, exposure: 'sports',
+    framerate: 25, awb: 'greyworld', flush: true
 });
 
-let motionTimeout
-videoBuffer.on('motion', () => {
-    console.log(`motion detected: ${time()}`)
-    if (motionTimeout) {
-        clearTimeout(motionTimeout)
-    } else {
-        console.log(`start stream: ${time()}`)
-        videoBuffer.startStream()
-    }
+// let motionTimeout
+// videoBuffer.on('motion', () => {
+//     console.log(`motion detected: ${time()}`)
+//     if (motionTimeout) {
+//         clearTimeout(motionTimeout)
+//     } else {
+//         console.log(`start stream: ${time()}`)
+//         videoBuffer.startStream()
+//     }
 
-    motionTimeout = setTimeout(() => {
-        motionTimeout = null
-        console.log(`stop stream: ${time()}`)
-        videoBuffer.stopStream().then(filename => console.log(filename))
-    }, 20000)
-})
+//     motionTimeout = setTimeout(() => {
+//         motionTimeout = null
+//         console.log(`stop stream: ${time()}`)
+//         videoBuffer.stopStream().then(filename => console.log(filename))
+//     }, 20000)
+// })
 
-// setTimeout(() => {
-//     console.log(`first stream: ${time()}`)
-//     videoBuffer.startStream()
-// }, 20000)
+setTimeout(() => {
+    console.log(`first stream: ${time()}`)
+    videoBuffer.startStream()
+}, 15300)
 
 // setTimeout(() => {
 //     videoBuffer.stopStream().then(filename => console.log(filename))
 //     console.log(`second stream: ${time()}`)
 //     videoBuffer.startStream()
-// }, 40000)
+// }, 20000)
 
 
-
-// setTimeout(() => {
-//     console.log(`stop: ${time()}`)
-//     videoBuffer.stopStream().then(filename => console.log(filename))
-//     videoBuffer.stopVideo()
-// }, 60000)
+setTimeout(() => {
+    console.log(`stop: ${time()}`)
+    videoBuffer.stopStream().then(filename => console.log(filename))
+    videoBuffer.stopVideo()
+}, 30000)

@@ -6,7 +6,7 @@ const EventEmitter = require('events'),
   INFINITY_MS = 999999999
 
 const SEPARATOR = new Buffer([0,0,0,1]);
-const DEFAULT_SETTINGS = { width: 256, height: 256, timeout: INFINITY_MS }
+const DEFAULT_SETTINGS = { width: 256, height: 256, timeout: 0 }
 
 class VideoFeed extends EventEmitter {
   constructor() {

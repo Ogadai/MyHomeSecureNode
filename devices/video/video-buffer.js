@@ -8,19 +8,26 @@ const EventEmitter = require('events'),
       VideoFeed = require('./video-feed'),
       StoreFolder = require('../imaging/store-folder')
 
-const SETUP_FRAME_COUNT = 3
 const DEFAULT_OPTIONS = {
     debug: false,
     tempPath: '.',
     videoPath: '.',
     bufferMilliseconds: 10000,
     minimumRate: 500,
+    maximumRate: 100000,
     movementThreshold: 2.3
 }
 
 const fileName = (folder, file) => {
     return path.join(__dirname, '../..', folder, file)
 }
+
+const SETUP_FRAME_COUNT = 2
+const CODED_SLICE_IDR_PICTURE = 5
+const SEQUENCE_PARAMETER_SET = 7
+const PICTURE_PARAMETER_SET = 8
+
+const FRAME_INIT_TYPES = [CODED_SLICE_IDR_PICTURE, PICTURE_PARAMETER_SET]
 
 class VideoBuffer extends EventEmitter {
     constructor(options) {
@@ -56,6 +63,8 @@ class VideoBuffer extends EventEmitter {
         this.videoFeed.start(cameraSettings)
 
         this.lastMotionTime = Date.now()
+
+        this.setupFrames = []
     }
 
     stopVideo() {
@@ -83,8 +92,18 @@ class VideoBuffer extends EventEmitter {
                 this.writeStream.write(data)
             })
 
+            let foundFirstSlice = false
             this.bufferFrames.forEach(({data}) => {
-                this.writeStream.write(data)
+                if (!foundFirstSlice) {
+                    const nalu = this.getNALU(data)
+                    if (FRAME_INIT_TYPES.includes(nalu.unit_type)) {
+                        foundFirstSlice = true
+                    }
+                }
+
+                if (foundFirstSlice) {
+                    this.writeStream.write(data)
+                }
             })
         })
     }
@@ -105,6 +124,11 @@ class VideoBuffer extends EventEmitter {
     }
 
     onFrame(data) {
+        const nalu = this.getNALU(data)
+        // if (nalu.unit_type !== 1) {
+        //     console.log(`Ref ${nalu.ref_idc}, Type ${nalu.unit_type} (size ${data.length})`)
+        // }
+
         if (this.setupFrames.length < SETUP_FRAME_COUNT) {
             this.setupFrames.push(data)
         }
@@ -121,6 +145,7 @@ class VideoBuffer extends EventEmitter {
         this.bufferFrames = oldFrames.concat([{
             timestamp,
             data,
+            type: nalu.unit_type,
             size: data.length
         }])
 
@@ -131,6 +156,17 @@ class VideoBuffer extends EventEmitter {
         this.checkFramesForMotion()
     }
 
+    getNALU(data) {
+        if (data.length > 4) {
+            const nalu = data[4]
+            return {
+                ref_idc: (nalu & 98) >> 5,
+                unit_type: (nalu & 31)
+            }
+        }
+        return {}
+    }
+
     checkFramesForMotion() {
         let previousCount = 0;
         let previousSum = 0;
@@ -139,17 +175,20 @@ class VideoBuffer extends EventEmitter {
 
         const timeNow = Date.now()
 
-        this.bufferFrames.forEach(({timestamp, size}) => {
-            if (timestamp < timeNow - 1000) {
-                previousCount++
-                previousSum += size
-            } else {
-                lastCount++
-                lastSum += size
+        this.bufferFrames.forEach(({timestamp, size, type}) => {
+            if (type !== CODED_SLICE_IDR_PICTURE) {
+                if (timestamp < timeNow - 1000) {
+                    previousCount++
+                    previousSum += size
+                } else {
+                    lastCount++
+                    lastSum += size
+                }
             }
         })
 
-        const previousAvg = previousCount > 0 ? previousSum / previousCount : 0
+        const previousAvg = Math.min(this.options.maximumRate,
+            previousCount > 0 ? previousSum / previousCount : 0)
         const lastAvg = lastCount > 0 ? lastSum / lastCount : 0
 
         if (this.options.debug) {
