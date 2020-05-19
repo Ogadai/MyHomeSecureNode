@@ -1,25 +1,20 @@
 "use strict"
 const EventEmitter = require('events'),
       extend = require('extend'),
-      fs = require('fs'),
-      path = require('path'),
-      spawn = require("child_process").spawn,
       moment = require('moment'),
       VideoFeed = require('./video-feed'),
-      StoreFolder = require('../imaging/store-folder')
+      StoreFolder = require('../imaging/store-folder'),
+      Mp4BoxToFile = require('./mp4box-to-file'),
+      FfmpegToFile = require('./ffmpeg-to-file')
 
 const DEFAULT_OPTIONS = {
     debug: false,
-    tempPath: '.',
+    useFfmpeg: false,
     videoPath: '.',
     bufferMilliseconds: 10000,
     minimumRate: 500,
     maximumRate: 100000,
     movementThreshold: 2.3
-}
-
-const fileName = (folder, file) => {
-    return path.join(__dirname, '../..', folder, file)
 }
 
 const SETUP_FRAME_COUNT = 2
@@ -42,9 +37,9 @@ class VideoBuffer extends EventEmitter {
         this.setupFrames = []
         this.bufferFrames = []
 
-        this.tempName = null
-        this.writeName = null
-        this.writeStream = null
+        this.streamToFile = null
+
+        this.timelapseTargets = []
     }
 
     isRunning() {
@@ -52,7 +47,7 @@ class VideoBuffer extends EventEmitter {
     }
 
     isStreaming() {
-        return !!this.writeStream;
+        return !!this.streamToFile;
     }
 
     startVideo(cameraSettings) {
@@ -84,12 +79,14 @@ class VideoBuffer extends EventEmitter {
         const filestamp = now.format('HH-mm-ss')
 
         this.storeFolder.checkFolder(folderstamp).then(() => {
-            this.tempName = `${filestamp}.h264`;
-            this.writeName = `${folderstamp}/${filestamp}.mp4`;
-            this.writeStream = fs.createWriteStream(fileName(this.options.tempPath, this.tempName))
+            const writeName = `${folderstamp}/${filestamp}.mp4`
+            
+            this.streamToFile = this.options.useFfmpeg
+                    ? new FfmpegToFile(this.options, writeName)
+                    : new Mp4BoxToFile(this.options, writeName)
 
             this.setupFrames.forEach(data => {
-                this.writeStream.write(data)
+                this.streamToFile.write(data)
             })
 
             let foundFirstSlice = false
@@ -102,25 +99,20 @@ class VideoBuffer extends EventEmitter {
                 }
 
                 if (foundFirstSlice) {
-                    this.writeStream.write(data)
+                    this.streamToFile.write(data)
                 }
             })
         })
     }
 
     stopStream() {
-        if (this.writeStream) {
-            this.writeStream.close()
-            this.writeStream = null
-
-            return this.convertToMP4(
-                fileName(this.options.tempPath, this.tempName),
-                fileName(this.options.videoPath, this.writeName)
-            )
+        if (this.streamToFile) {
+            const response = this.streamToFile.close();
+            this.streamToFile = null
+            return response
         } else {
             return Promise.resolve()
         }
-
     }
 
     onFrame(data) {
@@ -131,6 +123,8 @@ class VideoBuffer extends EventEmitter {
 
         if (this.setupFrames.length < SETUP_FRAME_COUNT) {
             this.setupFrames.push(data)
+        } else if (nalu.unit_type === CODED_SLICE_IDR_PICTURE) {
+            this.timelapseFrame(data)
         }
 
         const timestamp = Date.now()
@@ -149,8 +143,8 @@ class VideoBuffer extends EventEmitter {
             size: data.length
         }])
 
-        if (this.writeStream) {
-            this.writeStream.write(data)
+        if (this.streamToFile) {
+            this.streamToFile.write(data)
         }
 
         this.checkFramesForMotion()
@@ -201,19 +195,41 @@ class VideoBuffer extends EventEmitter {
         if ((previousCount > lastCount) && (timeNow > this.lastMotionTime + 10000)
                 && (lastAvg > previousAvg * this.options.movementThreshold)
                 && (lastAvg > this.options.minimumRate)) {
+            console.log(`motion detected - previousAvg: ${previousAvg}, lastAvg: ${lastAvg}`)
             this.emit('motion')
             this.lastMotionTime = timeNow
         }
     }
 
-    convertToMP4(from, to) {
-        return new Promise(resolve => {
-            const childProcess = spawn('MP4Box', ['-add', from, to])
-            childProcess.on('close', () => {
-                fs.unlinkSync(from)
-                resolve(to)
-            })
-        })
+    startTimelapse(target) {
+        this.timelapseTargets.push(target)
+
+        if (this.setupFrames.length >= SETUP_FRAME_COUNT) {
+            let index = this.bufferFrames.length - 1
+            while(index >= 0 && this.bufferFrames[index].type !== CODED_SLICE_IDR_PICTURE) {
+                index--
+            }
+            if (index >= 0) {
+                const frames = this.setupFrames.concat(this.bufferFrames[index].data)
+                target.create(frames)
+            }
+            
+        }
+    }
+    
+    stopTimelapse(target) {
+        this.timelapseTargets = this.timelapseTargets.filter(
+            t => t != target
+        )
+    }
+
+    timelapseFrame(data) {
+        if (this.timelapseTargets.length === 0) return
+
+        const frames = this.setupFrames.concat([data])
+        for(let target of this.timelapseTargets) {
+            target.create(frames)
+        }
     }
 }
 module.exports = VideoBuffer

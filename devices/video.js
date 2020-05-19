@@ -4,13 +4,15 @@ const EventEmitter = require('events'),
   VideoBuffer = require('./video/video-buffer'),
   Uploader = require('./uploader'),
   GoogleDrive = require('../google/google-drive'),
-  StillImage = require('./imaging/still-image')
+  StillImage = require('./imaging/still-image'),
+  FfmpegStill = require('./imaging/ffmpeg-still')
 
 const time = () => {
   return new Date().toISOString().split('T')[1]
 }
 
 const DEFAULT_OPTIONS = {
+  useFfmpeg: false,
   bufferMilliseconds: 10000,
   clipMilliseconds: 30000
 }
@@ -37,6 +39,11 @@ class VideoCamera extends EventEmitter {
     this.videoBuffer = new VideoBuffer(this.options)
     this.videoBuffer.on('motion', () => this.onMotion())
     setTimeout(() => this.startVideo(), 1000)
+
+    if (config.useFfmpeg) {
+      this.ffmpegStill = new FfmpegStill()
+      this.ffmpegStill.on('image', image => this.onTimelapseImage(image))
+    }
   }
 
   applySettings(settings) {
@@ -74,6 +81,15 @@ class VideoCamera extends EventEmitter {
         modes[newValue] = true
     }
 
+    if (modes.timelapse !== this.modes.timelapse) {
+      // Begin/end timelapse images for upload
+      if (modes.timelapse) {
+        this.startTimelapse()
+      } else {
+        this.stopTimelapse()
+      }
+    }
+
     if (modes.capture !== this.modes.capture) {
       // Begin/end capturing video for upload
       if (modes.capture) {
@@ -85,7 +101,7 @@ class VideoCamera extends EventEmitter {
 
     this.modes = modes
 
-    if (state === 'timelapse' && !this.snapshotPromise && !this.modes.capture) {
+    if (!this.ffmpegStill && state === 'timelapse' && !this.snapshotPromise && !this.modes.capture) {
       this.snapshotPromise = this.pauseForSnapshot().then(() => {
         this.snapshotPromise = null;
       })
@@ -189,6 +205,18 @@ class VideoCamera extends EventEmitter {
       const targetFolder = `${dateFolder}/${this.nodeName}`
       this.googleDrive.uploadFile(filePath, targetFolder)
     }
+  }
+
+  startTimelapse() {
+    this.videoBuffer.startTimelapse(this.ffmpegStill)
+  }
+
+  stopTimelapse() {
+    this.videoBuffer.stopTimelapse(this.ffmpegStill)
+  }
+
+  onTimelapseImage(image) {
+    this.uploader.queueData(image)
   }
 
   cameraSettings() {
