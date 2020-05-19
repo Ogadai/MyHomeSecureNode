@@ -81,7 +81,7 @@ class VideoCamera extends EventEmitter {
         modes[newValue] = true
     }
 
-    if (modes.timelapse !== this.modes.timelapse) {
+    if (this.ffmpegStill && modes.timelapse !== this.modes.timelapse) {
       // Begin/end timelapse images for upload
       if (modes.timelapse) {
         this.startTimelapse()
