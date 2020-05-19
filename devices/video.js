@@ -63,9 +63,9 @@ class VideoCamera extends EventEmitter {
 
       this.states.on[name] = value;
     } else if (state == 'night') {
-      this.nightMode = true
+      this.setNightMode(true)
     } else if (state == 'day') {
-      this.nightMode = false
+      this.setNightMode(false)
     } else {
       this.states.on._default = state;
     }
@@ -105,6 +105,18 @@ class VideoCamera extends EventEmitter {
       this.snapshotPromise = this.pauseForSnapshot().then(() => {
         this.snapshotPromise = null;
       })
+    }
+  }
+
+  setNightMode(nightMode) {
+    if (this.nightMode !== nightMode) {
+      this.nightMode = nightMode
+
+      if (this.videoBuffer.isRunning()) {
+        this.stopVideo().then(() => {
+          this.startVideo()
+        })
+      }
     }
   }
 
@@ -220,7 +232,13 @@ class VideoCamera extends EventEmitter {
   }
 
   cameraSettings() {
-    return {...this.options.settings}
+    const settings = {...this.options.settings}
+
+    if (this.nightMode) {
+      return {... settings, ...this.options.nightSettings }
+    }
+
+    return settings
   }
 
   _test() {
