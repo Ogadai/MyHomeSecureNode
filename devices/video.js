@@ -26,7 +26,7 @@ class VideoCamera extends EventEmitter {
     this.states = { on: { _default: 'off' } }
     this.nodeName = nodeName
 
-    this.streamTimeout = null
+    this.motionTimeout = null
     this.modes = {
       motion: false,
       timelapse: false
@@ -79,6 +79,10 @@ class VideoCamera extends EventEmitter {
     for(let name of Object.keys(this.states.on)) {
         const newValue = this.states.on[name];
         modes[newValue] = true
+    }
+
+    if (modes.motion && !this.modes.motion) {
+      this.startMotion();
     }
 
     if (this.ffmpegStill && modes.timelapse !== this.modes.timelapse) {
@@ -159,18 +163,20 @@ class VideoCamera extends EventEmitter {
 
   onMotion() {
     this.emit('changed', 'movement')
+  }
 
-    if (this.streamTimeout) {
-      clearTimeout(this.streamTimeout)
+  startMotion() {
+    if (this.motionTimeout) {
+      clearTimeout(this.motionTimeout)
     } else {
       console.log(`start stream: ${time()}`)
       this.startStream('motion')
     }
 
-    this.streamTimeout = setTimeout(() => {
+    this.motionTimeout = setTimeout(() => {
       console.log(`stop stream: ${time()}`)
 
-      this.streamTimeout = null
+      this.motionTimeout = null
       this.stopStream('motion')
     }, this.options.clipMilliseconds - this.options.bufferMilliseconds)
   }

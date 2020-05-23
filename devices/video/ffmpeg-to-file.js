@@ -23,11 +23,8 @@ class FfmpegToFile {
             this.filePath
           ])
 
-        const processExit = () => {
-            process.removeListener('exit', processExit)
-            this.childProcess.kill()
-        }
-        process.on('exit', processExit)
+        this.processExit = this.processExit.bind(this)
+        process.on('exit', this.processExit)
     }
 
     write(data) {
@@ -36,9 +33,21 @@ class FfmpegToFile {
 
     close() {
         return new Promise(resolve => {
-            this.childProcess.on('close', () => resolve(this.filePath))
+            const onClosed = () => {
+                this.childProcess.removeListener('close', onClosed)
+                resolve(this.filePath)
+            }
+            
+            process.removeListener('exit', this.processExit)
+
+            this.childProcess.on('close', onClosed)
             this.childProcess.stdin.end()
         })
+    }
+
+    processExit() {
+        process.removeListener('exit', this.processExit)
+        this.childProcess.kill()
     }
 }
 

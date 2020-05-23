@@ -40,7 +40,7 @@ class CameraProcess extends EventEmitter {
       })
     });
 
-    this.childProcess.on('close', this.childStopped)
+    this.childProcess.once('close', this.childStopped)
     return this.childProcess.stdout
   }
 
@@ -55,7 +55,7 @@ class CameraProcess extends EventEmitter {
         this.childProcess = null
 
         try {
-          childProcess.on('close', () => {
+          childProcess.once('close', () => {
             console.log(`${this.command} stopped`)
             resolve()
           })

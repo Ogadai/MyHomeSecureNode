@@ -6,14 +6,18 @@ class FfmpegStill extends EventEmitter {
   create(frames) {
     let buffer = null
 
-    const processExit = () => {
+    const removeListeners = () => {
+      childProcess.stdout.removeListener('data', onChunk)
       process.removeListener('exit', processExit)
       childProcess.removeListener('close', childClosed)
+    }
+
+    const processExit = () => {
+      removeListeners()
       childProcess.kill()
     }
     const childClosed = () => {
-      process.removeListener('exit', processExit)
-
+      removeListeners()
       if (buffer) {
         this.emit('image', buffer)
       }
@@ -35,8 +39,8 @@ class FfmpegStill extends EventEmitter {
     ])
 
     process.on('exit', processExit)
-    childProcess.on('close', childClosed)
-    childProcess.stdout.on('data', data => onChunk(data))
+    childProcess.once('close', childClosed)
+    childProcess.stdout.on('data', onChunk)
 
     for (let frame of frames) {
       childProcess.stdin.write(frame)
