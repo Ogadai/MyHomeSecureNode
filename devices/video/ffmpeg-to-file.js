@@ -4,7 +4,8 @@ const extend = require('extend'),
       spawn = require("child_process").spawn
 
 const DEFAULT_OPTIONS = {
-    videoPath: '.'
+    videoPath: '.',
+    framerate: undefined
 }
 
 const getFilePath = (folder, file) => {
@@ -17,11 +18,18 @@ class FfmpegToFile {
 
         this.filePath = getFilePath(this.options.videoPath, writeFile)
 
-        this.childProcess = spawn('ffmpeg', [
+        const framerateParams = this.options.framerate
+            ? ['-r', this.options.framerate] : [];
+
+        const params = [
+            ...framerateParams,
             '-i', 'pipe:0',
             '-vcodec', 'copy',
+            ...framerateParams,
             this.filePath
-          ])
+        ]
+
+        this.childProcess = spawn('ffmpeg', params)
 
         this.processExit = this.processExit.bind(this)
         process.on('exit', this.processExit)

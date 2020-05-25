@@ -53,6 +53,7 @@ class VideoBuffer extends EventEmitter {
     startVideo(cameraSettings) {
         this.stopVideo()
 
+        this.cameraSettings = cameraSettings
         this.videoFeed = new VideoFeed()
         this.videoFeed.on('frame', data => this.onFrame(data))
         this.videoFeed.start(cameraSettings)
@@ -78,12 +79,18 @@ class VideoBuffer extends EventEmitter {
         const folderstamp = now.format('YYYY-MM-DD')
         const filestamp = now.format('HH-mm-ss')
 
+        const fileSettings = {
+            tempPath: this.options.tempPath,
+            videoPath: this.options.videoPath,
+            framerate: this.cameraSettings.framerate
+        }
+
         this.storeFolder.checkFolder(folderstamp).then(() => {
             const writeName = `${folderstamp}/${filestamp}.mp4`
             
             this.streamToFile = this.options.useFfmpeg
-                    ? new FfmpegToFile(this.options, writeName)
-                    : new Mp4BoxToFile(this.options, writeName)
+                    ? new FfmpegToFile(fileSettings, writeName)
+                    : new Mp4BoxToFile(fileSettings, writeName)
 
             this.setupFrames.forEach(data => {
                 this.streamToFile.write(data)
