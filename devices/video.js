@@ -99,7 +99,9 @@ class VideoCamera extends EventEmitter {
       if (modes.capture) {
         this.startStream('capture')
       } else {
-        this.stopStream('capture', true)
+        this.stopStream('capture', true).catch(ex => {
+          console.error('Error closing stream file', ex);
+        })
       }
     }
 
