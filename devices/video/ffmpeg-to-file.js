@@ -23,6 +23,7 @@ class FfmpegToFile {
 
         const params = [
             ...framerateParams,
+            '-fflags', 'nobuffer',
             '-i', 'pipe:0',
             '-vcodec', 'copy',
             ...framerateParams,
