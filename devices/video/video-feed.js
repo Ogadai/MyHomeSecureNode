@@ -22,7 +22,7 @@ class VideoFeed extends EventEmitter {
     this.buffer = null
     const splitter = new Splitter(SEPARATOR);
 
-    const options = extend(DEFAULT_SETTINGS, cameraSettings)
+    const options = {...DEFAULT_SETTINGS, ...cameraSettings}
     const stdout = this.cameraProcess.start(options)
 
     stdout.pipe(splitter).on('data', data => this.onChunk(data));
