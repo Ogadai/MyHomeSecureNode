@@ -7,8 +7,8 @@ class FfmpegStill extends EventEmitter {
     let buffer = null
 
     const removeListeners = () => {
-      childProcess.stdout.removeListener('data', onChunk)
       process.removeListener('exit', processExit)
+      childProcess.stdout.removeListener('data', onChunk)
       childProcess.removeListener('close', childClosed)
     }
 
