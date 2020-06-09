@@ -97,6 +97,7 @@ class VideoBuffer extends EventEmitter {
             })
 
             let foundFirstSlice = false
+            let writtenSlices = 0;
             this.bufferFrames.forEach(({data}) => {
                 if (!foundFirstSlice) {
                     const nalu = this.getNALU(data)
@@ -107,6 +108,7 @@ class VideoBuffer extends EventEmitter {
 
                 if (foundFirstSlice) {
                     this.streamToFile.write(data)
+                    writtenSlices++;
                 }
             })
         })
