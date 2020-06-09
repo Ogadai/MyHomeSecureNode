@@ -36,6 +36,7 @@ class VideoBuffer extends EventEmitter {
         this.videoFeed = null
         this.setupFrames = []
         this.bufferFrames = []
+        this.bufferSizes = []
 
         this.streamToFile = null
 
@@ -142,7 +143,6 @@ class VideoBuffer extends EventEmitter {
                 && this.bufferFrames[startIndex].timestamp < timestamp - this.options.bufferMilliseconds) {
             startIndex++;
         }
-
         const oldFrames = (startIndex > 0) ? this.bufferFrames.slice(startIndex) : this.bufferFrames
 
         this.bufferFrames = oldFrames.concat([{
@@ -151,6 +151,15 @@ class VideoBuffer extends EventEmitter {
             type: nalu.unit_type,
             size: data.length
         }])
+
+        if (nalu.unit_type !== CODED_SLICE_IDR_PICTURE) {
+            this.bufferSizes.push(data.length)
+
+            const maxLength = 500
+            if (this.bufferSizes.length > maxLength) {
+                this.bufferSizes.splice(0, this.bufferSizes.length - maxLength)
+            }
+        }
 
         if (this.streamToFile) {
             this.streamToFile.write(data)
@@ -178,15 +187,13 @@ class VideoBuffer extends EventEmitter {
 
         const timeNow = Date.now()
 
-        this.bufferFrames.forEach(({timestamp, size, type}) => {
-            if (type !== CODED_SLICE_IDR_PICTURE) {
-                if (timestamp < timeNow - 1000) {
-                    previousCount++
-                    previousSum += size
-                } else {
-                    lastCount++
-                    lastSum += size
-                }
+        this.bufferSizes.forEach((size, index) => {
+            if (index < this.bufferSizes.length - 10) {
+                previousCount++
+                previousSum += size
+            } else {
+                lastCount++
+                lastSum += size
             }
         })
 
