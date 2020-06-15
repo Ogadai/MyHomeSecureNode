@@ -45,7 +45,6 @@ class VideoBuffer extends EventEmitter {
 
         this.reviewStream = null
         this.reviewHour = ''
-        this.reviewHourIndex = 0
     }
 
     isRunning() {
@@ -254,15 +253,15 @@ class VideoBuffer extends EventEmitter {
             if (this.reviewStream && reviewHour !== this.reviewHour) {
                 this.reviewStream.close()
                 this.reviewStream = null
-                this.reviewHourIndex = 0
             }
             this.reviewHour = reviewHour
-            this.reviewHourIndex++
 
             const folderstamp = now.format('YYYY-MM-DD')
             this.storeFolder.checkFolder(folderstamp).then(() => {
-                const writeName = `${folderstamp}/review-${reviewHour}-${this.reviewHourIndex}.mp4`
-                        
+                const fileName = `review-${now.format('HH-mm-ss')}.mp4`
+                console.log(`Creating review file ${fileName}`)
+                const writeName = `${folderstamp}/${fileName}`
+
                 const fileSettings = this.videoSettings()
                 this.reviewStream = this.options.useFfmpeg
                         ? new FfmpegToFile(fileSettings, writeName)

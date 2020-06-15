@@ -5,10 +5,11 @@ const EventEmitter = require('events'),
   Uploader = require('./uploader'),
   GoogleDrive = require('../google/google-drive'),
   StillImage = require('./imaging/still-image'),
-  FfmpegStill = require('./imaging/ffmpeg-still')
+  FfmpegStill = require('./imaging/ffmpeg-still'),
+  moment = require('moment')
 
 const time = () => {
-  return new Date().toISOString().split('T')[1]
+  return moment().format('HH-mm-ss')
 }
 
 const DEFAULT_OPTIONS = {

@@ -32,6 +32,12 @@ class FfmpegToFile {
 
         this.processExit = this.processExit.bind(this)
         process.on('exit', this.processExit)
+
+        this.childProcess.stderr.on('data', data => {
+            if (!Buffer.isBuffer(data)) {
+                console.error(data);
+            }
+        })
     }
 
     write(data) {
