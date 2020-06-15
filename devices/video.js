@@ -9,7 +9,7 @@ const EventEmitter = require('events'),
   moment = require('moment')
 
 const time = () => {
-  return moment().format('HH-mm-ss')
+  return moment().format('HH:mm:ss')
 }
 
 const DEFAULT_OPTIONS = {
