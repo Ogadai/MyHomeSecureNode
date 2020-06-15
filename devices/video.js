@@ -81,7 +81,7 @@ class VideoCamera extends EventEmitter {
         modes[newValue] = true
     }
 
-    if (modes.motion && !this.modes.motion) {
+    if (modes.motion) {
       this.startMotion();
     }
 

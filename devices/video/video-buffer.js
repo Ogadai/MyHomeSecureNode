@@ -9,6 +9,7 @@ const EventEmitter = require('events'),
 
 const DEFAULT_OPTIONS = {
     debug: false,
+    review: false,
     useFfmpeg: false,
     videoPath: '.',
     bufferMilliseconds: 10000,
@@ -41,6 +42,10 @@ class VideoBuffer extends EventEmitter {
         this.streamToFile = null
 
         this.timelapseTargets = []
+
+        this.reviewStream = null
+        this.reviewHour = ''
+        this.reviewHourIndex = 0
     }
 
     isRunning() {
@@ -80,15 +85,10 @@ class VideoBuffer extends EventEmitter {
         const folderstamp = now.format('YYYY-MM-DD')
         const filestamp = now.format('HH-mm-ss')
 
-        const fileSettings = {
-            tempPath: this.options.tempPath,
-            videoPath: this.options.videoPath,
-            framerate: this.cameraSettings.framerate
-        }
-
         this.storeFolder.checkFolder(folderstamp).then(() => {
             const writeName = `${folderstamp}/${filestamp}.mp4`
             
+            const fileSettings = this.videoSettings()
             this.streamToFile = this.options.useFfmpeg
                     ? new FfmpegToFile(fileSettings, writeName)
                     : new Mp4BoxToFile(fileSettings, writeName)
@@ -98,7 +98,6 @@ class VideoBuffer extends EventEmitter {
             })
 
             let foundFirstSlice = false
-            let writtenSlices = 0;
             this.bufferFrames.forEach(({data}) => {
                 if (!foundFirstSlice) {
                     const nalu = this.getNALU(data)
@@ -109,7 +108,6 @@ class VideoBuffer extends EventEmitter {
 
                 if (foundFirstSlice) {
                     this.streamToFile.write(data)
-                    writtenSlices++;
                 }
             })
         })
@@ -135,6 +133,7 @@ class VideoBuffer extends EventEmitter {
             this.setupFrames.push(data)
         } else if (nalu.unit_type === CODED_SLICE_IDR_PICTURE) {
             this.timelapseFrame(data)
+            if (this.options.review) this.reviewFrame(data)
         }
 
         const timestamp = Date.now()
@@ -245,6 +244,51 @@ class VideoBuffer extends EventEmitter {
         const frames = this.setupFrames.concat([data])
         for(let target of this.timelapseTargets) {
             target.create(frames)
+        }
+    }
+
+    reviewFrame(data) {
+        const now = moment()
+        const reviewHour = now.format('HH')
+        if (!this.reviewStream) {
+            if (this.reviewStream && reviewHour !== this.reviewHour) {
+                this.reviewStream.close()
+                this.reviewStream = null
+                this.reviewHourIndex = 0
+            }
+            this.reviewHour = reviewHour
+            this.reviewHourIndex++
+
+            const folderstamp = now.format('YYYY-MM-DD')
+            this.storeFolder.checkFolder(folderstamp).then(() => {
+                const writeName = `${folderstamp}/review-${reviewHour}-${this.reviewHourIndex}.mp4`
+                        
+                const fileSettings = this.videoSettings()
+                this.reviewStream = this.options.useFfmpeg
+                        ? new FfmpegToFile(fileSettings, writeName)
+                        : new Mp4BoxToFile(fileSettings, writeName)
+    
+                this.setupFrames.forEach(setupFrame => {
+                    this.reviewStream.write(setupFrame)
+                })
+                this.reviewStream.write(data)
+            })
+        } else if (this.reviewStream) {
+            try {
+                this.reviewStream.write(data)
+            } catch (error) {
+                console.error('Error writing to review stream', error)
+                this.reviewStream.close()
+                this.reviewStream = null
+            }
+        }
+    }
+
+    videoSettings() {
+        return {
+            tempPath: this.options.tempPath,
+            videoPath: this.options.videoPath,
+            framerate: this.cameraSettings.framerate
         }
     }
 }

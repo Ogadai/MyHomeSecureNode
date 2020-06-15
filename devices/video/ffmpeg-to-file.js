@@ -54,6 +54,7 @@ class FfmpegToFile {
 
     processExit() {
         process.removeListener('exit', this.processExit)
+        this.childProcess.stdin.end()
         this.childProcess.kill()
     }
 }
