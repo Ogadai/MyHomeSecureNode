@@ -149,7 +149,9 @@ class VideoCamera extends EventEmitter {
         const stillImage = new StillImage()
 
         const options = this.cameraSettings()
+
         delete options.framerate
+        delete options.intra
 
         stillImage.capture(options)
 
