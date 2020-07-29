@@ -156,6 +156,7 @@ class VideoCamera extends EventEmitter {
 
         delete options.framerate
         delete options.intra
+        delete options.profile
 
         stillImage.capture(options)
 
