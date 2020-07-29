@@ -45,6 +45,8 @@ class VideoBuffer extends EventEmitter {
 
         this.reviewStream = null
         this.reviewHour = ''
+
+        this.streamClients = [];
     }
 
     isRunning() {
@@ -122,6 +124,14 @@ class VideoBuffer extends EventEmitter {
         }
     }
 
+    startStreamClient(client) {
+        this.streamClients.push(client);
+        client.setupFrames(this.setupFrames);
+        return () => {
+            this.streamClients = this.streamClients.filter(c => c !== client);
+        };
+    }
+
     onFrame(data) {
         const nalu = this.getNALU(data)
         // if (nalu.unit_type !== 1) {
@@ -134,6 +144,10 @@ class VideoBuffer extends EventEmitter {
             this.timelapseFrame(data)
             if (this.options.review) this.reviewFrame(data)
         }
+
+        this.streamClients.forEach(client => {
+            client.frame(data, nalu.unit_type === CODED_SLICE_IDR_PICTURE);
+        });
 
         const timestamp = Date.now()
         let startIndex = 0
@@ -212,6 +226,10 @@ class VideoBuffer extends EventEmitter {
             console.log(`motion detected - previousAvg: ${previousAvg}, lastAvg: ${lastAvg}`)
             this.emit('motion')
             this.lastMotionTime = timeNow
+            
+            this.streamClients.forEach(client => {
+                client.motion()
+            })
         }
     }
 

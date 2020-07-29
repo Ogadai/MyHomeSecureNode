@@ -143,6 +143,10 @@ class VideoCamera extends EventEmitter {
     })
   }
 
+  startStreamClient(client) {
+    return this.videoBuffer.startStreamClient(client);
+  }
+
   captureSnapshot() {
     return new Promise(resolve => {
       try {
