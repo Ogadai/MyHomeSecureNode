@@ -69,6 +69,15 @@ class SocketServer {
         });
 
         if (stream) {
+          stream.on('settings', settings => {
+            const message = {
+              name: 'camera',
+              event: 'settings',
+              content: settings
+            };
+            connection.sendUTF(JSON.stringify(message));
+          });
+
           stream.on('frame', frame => {
             connection.sendBytes(frame)
           })
@@ -76,7 +85,7 @@ class SocketServer {
           stream.on('motion', () => {
             const message = {
               name: 'camera',
-              state: 'motion'
+              event: 'motion'
             };
             connection.sendUTF(JSON.stringify(message));
           })

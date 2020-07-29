@@ -19,6 +19,8 @@ class Stream extends EventEmitter {
     }
 
     setupFrames(frames) {
+        const { width, height } = this.camera.options.settings;
+        this.emit('settings', { width, height });
         frames.forEach(frame => {
             this.emit('frame', frame);
         });
