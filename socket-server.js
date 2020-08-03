@@ -32,6 +32,10 @@ class SocketServer {
             autoAcceptConnections: false
         });
         wsServer.on('request', request => this.onRequest(request));
+
+        this.hubClient.on('initialised', () => {
+          this.hubClient.send({ method: 'websocket', status: 'started', address });
+        });
     }
     
     close() {
