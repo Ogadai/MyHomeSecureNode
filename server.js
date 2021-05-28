@@ -1,13 +1,15 @@
 ﻿var HubClient = require('./hub-client'),
     Node = require('./node'),
     DeviceList = require('./device-list')
-    SocketServer = require('./socket-server'),
+    SocketServer = require('./socket-server')
+    IPCamList = require('./ip_cam_list'),
     settings = require('./settings'),
     keypress = require("keypress");
 
 var hubClient = new HubClient(settings.hubServer || 'localhost', settings.hubPort),
     deviceList = new DeviceList(settings.devices, settings.name),
     node = new Node(settings.name, hubClient, deviceList),
+    ipCamList = new IPCamList(settings.ipcams),
     socketServer = null;
 
 hubClient.connect();
