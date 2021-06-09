@@ -10,12 +10,17 @@ var hubClient = new HubClient(settings.hubServer || 'localhost', settings.hubPor
     deviceList = new DeviceList(settings.devices, settings.name),
     node = new Node(settings.name, hubClient, deviceList),
     ipCamList = new IPCamList(settings.ipcams),
-    socketServer = null;
+    socketServers = [];
 
 hubClient.connect();
 
 if (settings.stream) {
-    socketServer = new SocketServer(hubClient, deviceList, settings.stream);
+    socketServers.push(new SocketServer(hubClient, deviceList, settings.stream));
+}
+if (settings.streams) {
+    for(let stream of settings.streams) {
+        socketServers.push(new SocketServer(hubClient, deviceList, stream));
+    }
 }
 
 keypress(process.stdin);
@@ -26,7 +31,11 @@ process.stdin.on('keypress', function (ch, key) {
                 case 'c':
                     console.log('disconnecting devices');
                     deviceList.disconnectAll();
-                    if (socketServer) socketServer.close();
+
+                    for(let socket of socketServers) {
+                        socket.close();
+                    }
+
                     process.exit(0);
                     break;
             }
@@ -51,7 +60,10 @@ process.stdin.resume();
 function exitHandler(options, err) {
     if (options.cleanup) {
         deviceList.disconnectAll();
-        if (socketServer) socketServer.close();
+        
+        for(let socket of socketServers) {
+            socket.close();
+        }
     }
     if (err) console.log(err.stack);
     if (options.exit) process.exit();

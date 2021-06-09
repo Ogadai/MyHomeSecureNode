@@ -8,6 +8,7 @@ deviceType.rfid = require('./devices/rfid');
 deviceType.camera = require('./devices/camera');
 deviceType.camera2 = require('./devices/camera2');
 deviceType.video = require('./devices/video');
+deviceType.ipcam = require('./devices/ipcam');
 
 function DeviceList(configList, nodeName) {
     var self = this,

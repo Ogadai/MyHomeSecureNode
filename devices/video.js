@@ -251,14 +251,16 @@ class VideoCamera extends EventEmitter {
     const settings = {...this.options.settings}
 
     if (this.nightMode) {
-      return {... settings, ...this.options.nightSettings }
+      return {...settings, ...this.options.nightSettings }
     }
 
     return settings
   }
 
   _test() {
-    this.setState(this.modes.motion ? "off" : "timelapse")
+    //this.setState(this.modes.motion ? "off" : "timelapse")
+    console.log('marking for motion triggered')
+    this.videoBuffer.motionTriggered = true;
   }
 }
 module.exports = VideoCamera

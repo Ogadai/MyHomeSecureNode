@@ -1,11 +1,14 @@
 "use strict"
 const EventEmitter = require('events'),
+      fs = require('fs'),
+      path = require('path'),
       extend = require('extend'),
       moment = require('moment'),
       VideoFeed = require('./video-feed'),
       StoreFolder = require('../imaging/store-folder'),
       Mp4BoxToFile = require('./mp4box-to-file'),
-      FfmpegToFile = require('./ffmpeg-to-file')
+      FfmpegToFile = require('./ffmpeg-to-file'),
+      FfmpegStill = require('../imaging/ffmpeg-still')
 
 const DEFAULT_OPTIONS = {
     debug: false,
@@ -47,6 +50,12 @@ class VideoBuffer extends EventEmitter {
         this.reviewHour = ''
 
         this.streamClients = [];
+
+        if (this.options.useFfmpeg) {
+            this.ffmpegStill = new FfmpegStill()
+            this.ffmpegStill.on('image', image => this.onTimelapseImage(image))
+            this.motionTriggered = false;
+        }
     }
 
     isRunning() {
@@ -80,6 +89,7 @@ class VideoBuffer extends EventEmitter {
     }
     
     startStream() {
+        this.motionTriggered = true;
         this.stopStream()
 
         const now = moment()
@@ -134,9 +144,6 @@ class VideoBuffer extends EventEmitter {
 
     onFrame(data) {
         const nalu = this.getNALU(data)
-        // if (nalu.unit_type !== 1) {
-        //     console.log(`Ref ${nalu.ref_idc}, Type ${nalu.unit_type} (size ${data.length})`)
-        // }
 
         if (this.setupFrames.length < SETUP_FRAME_COUNT) {
             this.setupFrames.push(data)
@@ -178,6 +185,11 @@ class VideoBuffer extends EventEmitter {
         }
 
         this.checkFramesForMotion()
+
+        if (this.motionTriggered && nalu.unit_type === CODED_SLICE_IDR_PICTURE) {
+            this.motionTriggered = false;
+            this.ffmpegStill.create(this.setupFrames.concat([data]));
+        }
     }
 
     getNALU(data) {
@@ -305,8 +317,25 @@ class VideoBuffer extends EventEmitter {
         return {
             tempPath: this.options.tempPath,
             videoPath: this.options.videoPath,
-            framerate: this.cameraSettings.framerate
+            framerate: this.cameraSettings && this.cameraSettings.framerate
         }
+    }
+    
+    onTimelapseImage(image) {
+        const now = moment()
+        const folderstamp = now.format('YYYY-MM-DD')
+        const filestamp = now.format('HH-mm-ss')
+
+        this.storeFolder.checkFolder(folderstamp).then(() => {
+            const writeName = `${folderstamp}/${filestamp}.jpg`;
+            const filePath = path.join(__dirname, '../..', this.options.videoPath, writeName)
+
+            fs.writeFile(filePath, image, err => {
+                if (err) {
+                    console.error(`Error writing image to ${filePath}`, err)
+                }
+            });
+        });
     }
 }
 module.exports = VideoBuffer

@@ -12,39 +12,60 @@ class SocketServer {
         if (!this.camera) {
             console.warn(`Couldn't find stream device "${settings.device}"`)
         }
+        this.settings = settings;
 
         const ip = getIP();
         const port = settings.port || 8081;
         const address = `ws://${ip}:${port}`;
+        this.address = address;
 
-        const server = http.createServer((req, res) => {
-            res.writeHead(200, {'Content-Type': 'text/plain'});
-            res.write('Listening for Web Socket connections');
-            res.end();
-        });
-        server.listen(port, () => {
-            this.hubClient.send({ method: 'websocket', status: 'started', address });
-            console.log(`Listening for connections at ${address}`);
-        });
-        
-        const wsServer = new WebSocketServer({
-            httpServer: server,
-            autoAcceptConnections: false
-        });
-        wsServer.on('request', request => this.onRequest(request));
+        if (this.camera.type === 'jsmp') {
+          this.initialiseJsmp(settings.port);
+        } else {
+          this.initialiseCam(port);
+        }
+    }
 
-        this.hubClient.on('initialised', () => {
-          this.hubClient.send({ method: 'websocket', status: 'started', address });
-        });
+    initialiseCam(port) {
+      const server = http.createServer((req, res) => {
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.write('Listening for Web Socket connections');
+        res.end();
+      });
+      server.listen(port, () => {
+          this.hubClient.send({ method: 'websocket', status: 'started', address: this.address, name: this.settings.name, type: 'cam' });
+          console.log(`Listening for connections at ${this.address}`);
+      });
+      
+      const wsServer = new WebSocketServer({
+          httpServer: server,
+          autoAcceptConnections: false
+      });
+      wsServer.on('request', request => this.onRequest(request));
+
+      this.hubClient.on('initialised', () => {
+        this.hubClient.send({ method: 'websocket', status: 'started', address: this.address, name: this.settings.name, type: 'cam' });
+      });
+    }
+
+    initialiseJsmp(port) {
+      this.camera.initialise(port);
+
+      this.hubClient.send({ method: 'websocket', status: 'started', address: this.address, name: this.settings.name, type: 'jsmp' });
+      console.log(`Listening for connections at ${this.address}`);
+      
+      this.hubClient.on('initialised', () => {
+        this.hubClient.send({ method: 'websocket', status: 'started', address: this.address, name: this.settings.name, type: 'jsmp' });
+      });
     }
     
     close() {
-        this.hubClient.send({ method: 'websocket', status: 'stopped' });
+        this.hubClient.send({ method: 'websocket', status: 'stopped', address: this.address });
         console.log('Stopped listening');
     }
 
     onRequest(request) {
-        console.log(`Web Socket opened from ${request.origin}`);
+        console.log(`Web Socket ${this.settings.port} opened from ${request.origin}`);
         let connection = request.accept('echo-protocol', request.origin);
         let stream = this.camera ? new Stream(this.camera) : null;
 
@@ -79,6 +100,7 @@ class SocketServer {
               event: 'settings',
               content: settings
             };
+            console.log('sending settings', JSON.stringify(settings))
             connection.sendUTF(JSON.stringify(message));
           });
 
