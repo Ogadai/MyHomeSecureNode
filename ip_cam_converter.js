@@ -131,7 +131,13 @@ class IPCamConverter {
   }
     
   convert264ToMP4(readFile, videoPath, writeFile) {
-    const fileSettings = { videoPath };
+    const fileSettings = {
+      videoPath,
+      framerate: 20,
+      ffmpeg: [
+        '-vsync', 'cfr'
+      ]
+    };
 
     return new Promise((resolve, reject) => {
       try {
@@ -153,7 +159,7 @@ class IPCamConverter {
           resolve();
         })
       } catch(e) {
-        console.error(`Exception converting source video ${readFile}`, err)
+        console.error(`Exception converting source video ${readFile}`, e)
         reject(e);
       }
     })

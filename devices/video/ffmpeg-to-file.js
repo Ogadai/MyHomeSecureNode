@@ -5,7 +5,8 @@ const extend = require('extend'),
 
 const DEFAULT_OPTIONS = {
     videoPath: '.',
-    framerate: undefined
+    framerate: undefined,
+    ffmpeg: []
 }
 
 const getFilePath = (folder, file) => {
@@ -25,6 +26,7 @@ class FfmpegToFile {
             ...framerateParams,
             '-i', 'pipe:0',
             '-vcodec', 'copy',
+            ...this.options.ffmpeg,
             this.filePath
         ]
 
