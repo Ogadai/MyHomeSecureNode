@@ -144,7 +144,7 @@ class IPCamConverter {
         const streamToFile = new FfmpegToFile(fileSettings, writeFile)
 
         const readStream = fs.createReadStream(readFile)
-        
+
         readStream.on('error', err => {
           console.error(`Error reading source video ${readFile}`, err)
           reject(err)
