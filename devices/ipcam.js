@@ -9,7 +9,8 @@ const DEFAULT_OPTIONS = {
   user: 'admin',
   password: '',
   port: 8080,
-  streamReplace: []
+  streamReplace: [],
+  rtspStream: null
 }
 
 class IPCamera extends EventEmitter {
@@ -39,6 +40,11 @@ class IPCamera extends EventEmitter {
   
   getStreamUrl() {
     return new Promise((resolve, reject) => {
+      if (this.options.rtspStream) {
+        resolve(this.options.rtspStream);
+        return;
+      }
+
       const cam = new Cam({
         hostname: this.options.host,
         username: this.options.user,
