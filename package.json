@@ -12,7 +12,7 @@
     "googleapis": "^39.2.0",
     "jpeg-js": "^0.3.6",
     "keypress": "^0.2.1",
-    "moment": "^2.25.3",
+    "moment": "^2.29.2",
     "node-rtsp-stream": "git+https://github.com/Ogadai/node-rtsp-stream.git",
     "onoff": "^5.0.0",
     "onvif": "^0.6.4",
